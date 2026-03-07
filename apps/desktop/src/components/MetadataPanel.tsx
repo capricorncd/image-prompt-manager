@@ -304,6 +304,10 @@ export function MetadataPanel() {
               title={selectedPath}
             />
           </div>
+          <div className='text-xs text-zinc-500 flex pt-2 justify-between'>
+            <span>{String(rawMetadata.ImageWidth ?? '')} x {String(rawMetadata.ImageHeight ?? '')} px</span>
+            <span>{String(rawMetadata.FileSize ?? '')}</span>
+          </div>
         </div>
         <div>
           <label className={label}>UserComment</label>
