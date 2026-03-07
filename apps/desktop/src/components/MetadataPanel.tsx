@@ -220,7 +220,7 @@ export function MetadataPanel() {
           aria-labelledby="raw-modal-title"
         >
           <div
-            className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg border border-zinc-600 bg-zinc-900 shadow-xl"
+            className="flex max-h-[80vh] w-full max-w-3xl flex-col rounded-lg border border-zinc-600 bg-zinc-900 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex shrink-0 items-center justify-between border-b border-zinc-700 px-4 py-3">
