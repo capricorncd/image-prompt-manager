@@ -46,6 +46,8 @@ interface AppState {
   replaceImagePath: (originalPath: string, newPath: string) => void;
   /** 从列表中移除一张图片（如删除文件后） */
   removeImagePath: (path: string) => void;
+  /** 启动时恢复目录列表（仅用于从持久化恢复） */
+  restoreDirectories: (dirs: string[], currentDir: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -141,6 +143,49 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   setRawMetadata: (tags) => set({ rawMetadata: tags }),
+
+  restoreDirectories: (dirs, currentDir) =>
+    set({ directoryList: dirs, currentDir }),
 }));
+
+const PERSIST_KEY = 'image-prompt-manager:directories';
+
+/** 持久化目录列表与当前目录到 localStorage */
+function persistDirectories(state: { directoryList: string[]; currentDir: string | null }) {
+  try {
+    localStorage.setItem(
+      PERSIST_KEY,
+      JSON.stringify({ directoryList: state.directoryList, currentDir: state.currentDir })
+    );
+  } catch {
+    // ignore
+  }
+}
+
+/** 从 localStorage 读取已保存的目录列表 */
+export function getPersistedDirectories(): { directoryList: string[]; currentDir: string | null } | null {
+  try {
+    const raw = localStorage.getItem(PERSIST_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as { directoryList?: string[]; currentDir?: string | null };
+    if (!Array.isArray(data.directoryList)) return null;
+    return {
+      directoryList: data.directoryList,
+      currentDir: data.currentDir ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+let lastPersisted: string | null = null;
+useAppStore.subscribe((state) => {
+  const payload = { directoryList: state.directoryList, currentDir: state.currentDir };
+  const key = JSON.stringify(payload);
+  if (key !== lastPersisted) {
+    lastPersisted = key;
+    persistDirectories(payload);
+  }
+});
 
 export { PAGE_SIZE };
