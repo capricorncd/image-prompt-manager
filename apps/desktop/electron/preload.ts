@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 /** 主进程推送的目录变更事件 */
 export type DirChangedPayload = { event: 'add' | 'unlink' | 'change'; fullPath: string };
@@ -14,6 +14,18 @@ const electronAPI = {
   /** 打开文件夹对话框，返回选择的目录路径；并开始 chokidar 监听 */
   openDirectory(): Promise<string | null> {
     return ipcRenderer.invoke('dialog:openDirectory') as Promise<string | null>;
+  },
+  /** 从拖放得到的 File 获取本地路径（仅在 preload 中可用，contextIsolation 下必须经此桥接） */
+  getPathForDroppedFile(file: File): string {
+    try {
+      return webUtils.getPathForFile(file) ?? '';
+    } catch {
+      return '';
+    }
+  },
+  /** 拖入路径（文件或文件夹）：校验后加入已打开列表并监听，返回解析后的目录路径或 null */
+  addDirectoryByPath(dirPath: string): Promise<string | null> {
+    return ipcRenderer.invoke('dialog:addDirectoryByPath', dirPath) as Promise<string | null>;
   },
   /** 分页列出目录中的图片路径，避免大目录一次性加载 */
   listImages(dirPath: string, offset: number, limit: number): Promise<{ entries: string[]; hasMore: boolean }> {

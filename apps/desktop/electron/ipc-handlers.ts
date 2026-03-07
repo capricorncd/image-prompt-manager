@@ -59,6 +59,37 @@ export function registerIpcHandlers(): void {
     return dir;
   });
 
+  /** 拖入路径（文件或文件夹）：若是文件则取其所在目录，加入已打开列表并开启监听，返回解析后的目录路径或 null */
+  ipcMain.handle('dialog:addDirectoryByPath', async (_, rawPath: string): Promise<string | null> => {
+    if (!rawPath || typeof rawPath !== 'string') return null;
+    const resolved = path.resolve(rawPath.trim());
+    let dir: string;
+    try {
+      const stat = fs.statSync(resolved);
+      if (stat.isDirectory()) {
+        dir = resolved;
+      } else if (stat.isFile()) {
+        dir = path.dirname(resolved);
+      } else {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+    addOpenedRoot(dir);
+    const mainWin = getMainWindow();
+    if (mainWin) {
+      const key = path.normalize(dir);
+      const existing = unwatchFns.get(key);
+      if (existing) existing();
+      const unwatch = watchDirectory(dir, (event, fullPath) => {
+        mainWin.webContents.send('fs:dir-changed', { event, fullPath });
+      });
+      unwatchFns.set(key, unwatch);
+    }
+    return dir;
+  });
+
   ipcMain.handle('fs:removeDirectory', async (_, dirPath: string): Promise<void> => {
     const key = path.normalize(path.resolve(dirPath));
     const unwatch = unwatchFns.get(key);

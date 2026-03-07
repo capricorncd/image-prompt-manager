@@ -8,6 +8,9 @@ declare global {
     electronAPI: {
       ping(): Promise<'pong'>;
       openDirectory(): Promise<string | null>;
+      /** 从拖放得到的 File 获取本地路径（preload 中 webUtils.getPathForFile） */
+      getPathForDroppedFile(file: File): string;
+      addDirectoryByPath(dirPath: string): Promise<string | null>;
       listImages(
         dirPath: string,
         offset: number,
