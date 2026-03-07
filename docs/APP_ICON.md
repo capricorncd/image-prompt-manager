@@ -10,7 +10,7 @@
 apps/desktop/
 ├── build/                    # 构建资源目录（electron-builder 默认）
 │   ├── icon.png             # 通用：至少 256×256，可选 512×512
-│   ├── icon.ico             # Windows 专用（可选，无则用 icon.png）
+│   ├── icon.ico             # Windows 专用（可选，无则用 icon.png）不得小于256x256
 │   ├── icon.icns            # macOS 专用（可选，无则用 icon.png）
 │   └── icon.icon            # macOS 新格式（可选，需 Xcode 26+ / macOS 15+）
 ├── package.json
@@ -39,7 +39,7 @@ electron-builder 会用 `icon.png` 生成 Windows 与 Linux 所需图标；macOS
 
 ## 可选：各平台单独图标
 
-- **Windows**：在 `build/` 下增加 `icon.ico`（多尺寸 ICO，如 16/32/48/256），打包时会优先于 `icon.png`。
+- **Windows**：在 `build/` 下增加 `icon.ico`（多尺寸 ICO，如 16/32/48/256），打包时会优先于 `icon.png`。**若任务栏或 exe 仍显示默认图标**，请将 `icon.png` 转为 `icon.ico` 放入 `build/`，并在 `package.json` 的 `build.extraResources` 中增加 `{ "from": "build/icon.ico", "to": "build/icon.ico" }`，将 `build.win.icon` 改为 `"build/icon.ico"`。
 - **macOS**：在 `build/` 下增加 `icon.icns`（或 `.icon`），打包时会优先于 `icon.png`。
 - **Linux**：在 `build/icons/` 下放 `16x16.png`、`32x32.png`、`48x48.png`、`128x128.png`、`256x256.png`（文件名含尺寸即可）。
 

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, protocol, net } from 'electron';
+import { app, BrowserWindow, nativeImage, shell, protocol, net } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -27,12 +27,13 @@ function getWindowIconPath(): string | undefined {
 
 function createWindow(): void {
   const iconPath = getWindowIconPath();
+  const iconImage = iconPath ? nativeImage.createFromPath(iconPath) : null;
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    ...(iconPath && { icon: iconPath }),
+    ...(iconImage && !iconImage.isEmpty() && { icon: iconImage }),
     webPreferences: {
       preload: PRELOAD_SCRIPT,
       nodeIntegration: false,
@@ -43,6 +44,9 @@ function createWindow(): void {
   });
 
   win.once('ready-to-show', () => {
+    if (iconImage && !iconImage.isEmpty() && process.platform === 'win32') {
+      win.setIcon(iconImage);
+    }
     win.show();
     if (VITE_DEV_SERVER_URL) win.webContents.openDevTools();
   });
