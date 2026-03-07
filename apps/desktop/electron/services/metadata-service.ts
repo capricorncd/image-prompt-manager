@@ -85,16 +85,11 @@ const WRITE_OVERWRITE_ARGS = ['-overwrite_original'];
  * 有 SD WebUI 数据则按 SD 格式写回，没有则只写入正向提示词。
  */
 export async function writeImageInfo(filePath: string, meta: SDImageMetadata): Promise<void> {
-  // const value = getValueToWrite(meta);
-  await exiftool.write(
-    filePath,
-     {
-       'UserComment': meta.userComment,
-       // TODO: Parameters无法写入
-      // 'Parameters': value
-    },
-    WRITE_OVERWRITE_ARGS
-  );
+  const value = getValueToWrite(meta);
+  // TODO: Parameters无法写入
+  const tags: Record<string, string> = { [PNG_PARAMETERS_TAG]: value };
+  if (meta.userComment) tags[EXIF_USER_COMMENT_TAG] = meta.userComment;
+  await exiftool.write(filePath, tags, WRITE_OVERWRITE_ARGS);
 }
 
 /**
@@ -107,12 +102,7 @@ export async function saveImageWithMetadata(
   targetPath: string
 ): Promise<void> {
   await fs.promises.copyFile(originalPath, targetPath);
-  const value = getValueToWrite(meta);
-  await exiftool.write(
-    targetPath,
-    { [PNG_PARAMETERS_TAG]: value } as Record<string, string>,
-    WRITE_OVERWRITE_ARGS
-  );
+  await writeImageInfo(targetPath, meta);
 }
 
 /** 应用退出时关闭 exiftool 子进程 */

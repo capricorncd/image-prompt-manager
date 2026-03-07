@@ -100,7 +100,11 @@ export function MetadataPanel() {
       }
       const result = await api.saveImageWithMetadata(selectedPath, target, editedMetadata);
       if (result.ok) {
-        replaceImagePath(selectedPath, target);
+        // TODO: 自动刷新列表？
+        // replaceImagePath(selectedPath, target);
+        // const fresh = await window.electronAPI.readImageMetadata(target);
+        // selectImage(target, fresh ? fresh.parameters : null);
+        // setRawMetadata(fresh?.tags ?? {});
         setToast('已另存为');
       } else {
         setError(result.error ?? '保存失败');
@@ -148,6 +152,7 @@ export function MetadataPanel() {
             setToast('已覆盖保存');
             const fresh = await window.electronAPI.readImageMetadata(newPath);
             selectImage(newPath, fresh ? fresh.parameters : null);
+            setRawMetadata(fresh?.tags ?? {});
             const delResult = await window.electronAPI.deleteFile(selectedPath);
             if (!delResult.ok) {
               setError(delResult.error ?? '原文件删除失败，请手动删除');

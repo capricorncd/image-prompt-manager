@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedSizeGrid as Grid } from 'react-window';
+import { RefreshCw } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import { PAGE_SIZE } from '../stores/app-store';
 import { cn } from '../lib/cn';
@@ -21,6 +22,7 @@ export function ImageGrid() {
   const loading = useAppStore((s) => s.loading);
   const selectedPath = useAppStore((s) => s.selectedPath);
   const appendImages = useAppStore((s) => s.appendImages);
+  const clearImages = useAppStore((s) => s.clearImages);
   const setLoading = useAppStore((s) => s.setLoading);
   const selectImage = useAppStore((s) => s.selectImage);
   const setRawMetadata = useAppStore((s) => s.setRawMetadata);
@@ -69,6 +71,12 @@ export function ImageGrid() {
     if (loading || !hasMore || imagePaths.length === 0) return;
     loadPage(imagePaths.length);
   }, [loading, hasMore, imagePaths.length, loadPage]);
+
+  const handleRefresh = useCallback(() => {
+    if (!currentDir || loading) return;
+    clearImages();
+    loadPage(0);
+  }, [currentDir, loading, clearImages, loadPage]);
 
   const handleSelect = useCallback(
     async (path: string) => {
@@ -145,7 +153,22 @@ export function ImageGrid() {
         <span className="text-sm text-zinc-400">
           共 {imagePaths.length} 张{hasMore ? '+' : ''}
         </span>
-        {loading && <span className="text-xs text-zinc-500">加载中…</span>}
+        <div className="flex items-center gap-2">
+          {loading && <span className="text-xs text-zinc-500">加载中…</span>}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={loading}
+            className={cn(
+              'flex items-center gap-1.5 rounded px-2 py-1 text-xs text-zinc-400 transition-colors',
+              'hover:bg-zinc-700/80 hover:text-zinc-200 disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-zinc-400'
+            )}
+            title="刷新列表"
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
+            刷新
+          </button>
+        </div>
       </div>
       <div ref={containerRef} className="min-h-0 flex-1">
         <Grid
