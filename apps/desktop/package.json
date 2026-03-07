@@ -46,7 +46,7 @@
   "author": "Capricorncd",
   "license": "MIT",
   "build": {
-    "appId": "com.image-prompt-manager.app",
+    "appId": "com.capricorncd.image-prompt-manager.app",
     "productName": "Image Prompt Manager",
     "directories": {
       "output": "../../release",
@@ -60,6 +60,7 @@
     ],
     "win": {
       "target": ["nsis"],
+      "icon": "build/icon.ico",
       "signAndEditExecutable": false
     }
   }
