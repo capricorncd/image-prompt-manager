@@ -140,6 +140,7 @@ vite.config.ts.timestamp-*
 
 # Electron build output
 dist-electron/
+release/
 
 # Mac OS
 .DS_Store

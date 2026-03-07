@@ -89,6 +89,14 @@ image-prompt-manager/
 - 元数据读写与 SD 参数解析见 `apps/desktop/electron/services/metadata-service.ts`、`sd-params.ts`。
 - 详细依赖与目录说明见 `docs/PROJECT_STRUCTURE.md`。
 
+### Windows 下构建若报「无法创建符号链接」
+
+electron-builder 在解压 winCodeSign 缓存时会创建符号链接，Windows 默认无权限会报错。可选做法：
+
+1. **用管理员权限运行**：在「以管理员身份运行」的终端中执行 `npm run build`。
+2. **预填缓存（无需管理员）**：从 [winCodeSign-2.6.0 的 Source code (zip)](https://github.com/electron-userland/electron-builder-binaries/archive/refs/tags/winCodeSign-2.6.0.zip) 下载并解压，将解压后的 `electron-builder-binaries-winCodeSign-2.6.0/winCodeSign` 目录内容放到  
+   `%LOCALAPPDATA%\electron-builder\Cache\winCodeSign\` 下（若已有带数字的子目录如 `696511211`，可先删掉该子目录再放解压出的内容，或新建同名子目录后放入）。之后再次执行 `npm run build` 会跳过下载与 7z 解压。
+
 ## License
 
 MIT · Author: Capricorncd
