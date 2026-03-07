@@ -37,7 +37,8 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:ping', (): 'pong' => 'pong');
 
   ipcMain.handle('dialog:openDirectory', async (): Promise<string | null> => {
-    const result = await dialog.showOpenDialog(getMainWindow() ?? undefined, {
+    const win = getMainWindow() ?? undefined;
+    const result = await dialog.showOpenDialog(win as InstanceType<typeof BrowserWindow>, {
       properties: ['openDirectory'],
       title: '选择图片所在文件夹',
     });
@@ -45,13 +46,13 @@ export function registerIpcHandlers(): void {
     const dir = path.resolve(result.filePaths[0]!);
     addOpenedRoot(dir);
 
-    const win = getMainWindow();
-    if (win) {
+    const mainWin = getMainWindow();
+    if (mainWin) {
       const key = path.normalize(dir);
       const existing = unwatchFns.get(key);
       if (existing) existing();
       const unwatch = watchDirectory(dir, (event, fullPath) => {
-        win.webContents.send('fs:dir-changed', { event, fullPath });
+        mainWin.webContents.send('fs:dir-changed', { event, fullPath });
       });
       unwatchFns.set(key, unwatch);
     }
@@ -140,7 +141,8 @@ export function registerIpcHandlers(): void {
           win.focus();
           win.moveTop?.();
         }
-        const result = await dialog.showSaveDialog(win && !win.isDestroyed() ? win : undefined, {
+        const dialogWin = win && !win.isDestroyed() ? win : undefined;
+        const result = await dialog.showSaveDialog(dialogWin as InstanceType<typeof BrowserWindow>, {
           defaultPath,
           title: '另存为',
           buttonLabel: '保存',
@@ -158,9 +160,9 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('dialog:saveFile', async (_, defaultPath: string): Promise<string | null> => {
     if (!defaultPath || typeof defaultPath !== 'string') return null;
     const normalized = path.normalize(path.resolve(defaultPath));
-    const win = getMainWindow();
+    const win = getMainWindow() ?? undefined;
     try {
-      const result = await dialog.showSaveDialog(win ?? undefined, {
+      const result = await dialog.showSaveDialog(win as InstanceType<typeof BrowserWindow>, {
         defaultPath: normalized,
         title: '另存为',
         filters: [

@@ -7,8 +7,6 @@ import { cn } from '../lib/cn';
 const GAP = 8;
 const MIN_CELL_SIZE = 100;
 const CAPTION_HEIGHT = 24;
-/** 预留垂直滚动条宽度，避免出现横向滚动条 */
-const SCROLLBAR_WIDTH = 17;
 
 interface CellProps {
   columnIndex: number;

@@ -6,7 +6,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.app.json && vite build && electron-builder",
+    "build": "tsc -p tsconfig.json && vite build && electron-builder",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
