@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Save, Copy, X } from 'lucide-react';
+import { Save, Copy, X, ImageIcon } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import type { SDImageMetadata } from '../types/metadata';
 import { cn } from '../lib/cn';
@@ -54,6 +54,7 @@ export function MetadataPanel() {
   const [toast, setToast] = useState<string | null>(null);
   const [editableFilename, setEditableFilename] = useState('');
   const [showRawModal, setShowRawModal] = useState(false);
+  const [showLargeImageModal, setShowLargeImageModal] = useState(false);
 
   const meta = editedMetadata ?? emptyMeta();
 
@@ -202,15 +203,61 @@ export function MetadataPanel() {
     <aside className="relative flex w-80 shrink-0 flex-col border-l border-zinc-700 bg-zinc-900/80">
       <div className="flex h-12 shrink-0 w-full items-center justify-between border-b border-zinc-700 p-3">
         <span className="text-sm font-medium text-zinc-400">图片信息</span>
-        <button
-          type="button"
-          onClick={() => setShowRawModal(true)}
-          className="shrink-0 rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
-          title="原始信息"
-        >
-          原始信息
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowLargeImageModal(true)}
+            className="shrink-0 flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
+            title="查看大图"
+          >
+            <ImageIcon className="h-3.5 w-3.5" />
+            查看大图
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowRawModal(true)}
+            className="shrink-0 rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
+            title="原始信息"
+          >
+            原始信息
+          </button>
+        </div>
       </div>
+      {showLargeImageModal && selectedPath && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowLargeImageModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="large-image-title"
+        >
+          <div
+            className="flex max-h-[98vh] max-w-[96vw] flex-col rounded-lg border border-zinc-600 bg-zinc-900 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-zinc-700 px-4 py-2">
+              <h2 id="large-image-title" className="truncate text-sm font-medium text-zinc-200">
+                {getBasename(selectedPath)}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowLargeImageModal(false)}
+                className="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
+                aria-label="关闭"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto p-4 flex items-center justify-center">
+              <img
+                src={`local://image?path=${encodeURIComponent(selectedPath)}`}
+                alt=""
+                className="max-h-[85vh] max-w-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {showRawModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
