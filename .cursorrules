@@ -1,0 +1,60 @@
+# Role: Senior Electron & Image Metadata Engineer
+
+## Project Goal
+Build a cross-platform Desktop Application for managing and editing Stable Diffusion generated image metadata (Prompts, Negative Prompts, Seeds, Models, etc.).
+
+## Tech Stack
+- **Runtime**: Electron (Latest Stable)
+- **Frontend**: React + TypeScript + Vite
+- **UI Framework**: TailwindCSS + Shadcn/UI (for clean, modern look)
+- **State Management**: Zustand
+- **File System**: Node.js `fs`, `path`, `chokidar`
+- **Metadata Handling**: `exiftool-vendored` (Preferred for robustness) OR `png-chunk-text`
+- **Image Preview**: `react-image` with lazy loading
+
+## Critical Constraints & Security
+1. **Security**: 
+   - `nodeIntegration` must be FALSE.
+   - `contextIsolation` must be TRUE.
+   - Use `preload.ts` to expose only necessary IPC methods.
+   - Validate all file paths to prevent directory traversal.
+2. **SD Metadata Specifics**:
+   - Stable Diffusion WebUI saves params in PNG `tEXt` chunk under key "parameters".
+   - Some images may store in EXIF `UserComment`.
+   - Agent must prioritize parsing the "parameters" text chunk.
+   - When saving, ensure the PNG structure remains valid (do not corrupt the image).
+3. **Performance**:
+   - Use virtualized lists (e.g., `react-window`) for image galleries to handle 1000+ images.
+   - Generate thumbnails asynchronously in worker threads or main process to avoid UI blocking.
+
+## Workflow Instructions
+1. **Scaffold**: Initialize Electron + Vite + React structure.
+2. **IPC Design**: Define strict TypeScript interfaces for all `ipcMain` and `ipcRenderer` calls.
+3. **Core Logic**: 
+   - Implement `readImageMetadata(path)` returning { prompt, negativePrompt, seed, model, ... }.
+   - Implement `writeImageMetadata(path, newParams)` supporting "Save As".
+4. **UI Implementation**: 
+   - Sidebar for Directory/Folder management.
+   - Main grid for Image thumbnails.
+   - Right panel for Metadata editing (Textarea for prompts, inputs for seeds).
+5. **Error Handling**: Wrap all file operations in try-catch, show user-friendly Toast notifications.
+
+## Coding Standards
+- Use Functional Components with Hooks.
+- Strict TypeScript typing (no `any`).
+- Modularize logic (separate `fileService`, `metadataService`, `uiComponents`).
+- Comment complex logic, especially regarding PNG chunk manipulation.
+
+## Specific SD Parameter Parsing Logic
+When parsing SD images, the parameter string usually looks like:
+
+prompt here
+Negative prompt: negative here
+Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x512, Model hash: abc, Model: v1-5-pruned
+
+Agent must implement a parser that can split this string accurately into editable fields.
+
+## Response Style
+- Provide code in logical blocks.
+- Explain *why* a specific library is chosen for metadata.
+- Always remind about the `preload.js` security bridge when adding new IPC features.

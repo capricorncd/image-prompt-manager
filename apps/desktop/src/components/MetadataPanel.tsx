@@ -1,0 +1,358 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Save, Copy, X } from 'lucide-react';
+import { useAppStore } from '../stores/app-store';
+import type { SDImageMetadata } from '../types/metadata';
+import { cn } from '../lib/cn';
+
+function emptyMeta(): SDImageMetadata {
+  return {
+    prompt: '',
+    negativePrompt: '',
+    steps: null,
+    sampler: null,
+    cfgScale: null,
+    seed: null,
+    size: null,
+    modelHash: null,
+    model: null,
+    raw: '',
+  };
+}
+
+function numOrNull(s: string): number | null {
+  const n = parseInt(s, 10);
+  return Number.isNaN(n) ? null : n;
+}
+
+function floatOrNull(s: string): number | null {
+  const n = parseFloat(s);
+  return Number.isNaN(n) ? null : n;
+}
+
+function getBasename(filePath: string): string {
+  return filePath.replace(/^.*[/\\]/, '') || filePath;
+}
+
+/** 文件名不含后缀，用于文件名框展示 */
+function getBasenameWithoutExt(filePath: string): string {
+  const base = getBasename(filePath);
+  const dot = base.lastIndexOf('.');
+  return dot > 0 ? base.slice(0, dot) : base;
+}
+
+export function MetadataPanel() {
+  const selectedPath = useAppStore((s) => s.selectedPath);
+  const editedMetadata = useAppStore((s) => s.editedMetadata);
+  const setEditedMetadata = useAppStore((s) => s.setEditedMetadata);
+  const setError = useAppStore((s) => s.setError);
+  const replaceImagePath = useAppStore((s) => s.replaceImagePath);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [editableFilename, setEditableFilename] = useState('');
+  const [showRawModal, setShowRawModal] = useState(false);
+
+  const meta = editedMetadata ?? emptyMeta();
+
+  useEffect(() => {
+    if (selectedPath) setEditableFilename(getBasenameWithoutExt(selectedPath));
+  }, [selectedPath]);
+
+  const update = useCallback(
+    (patch: Partial<SDImageMetadata>) => {
+      setEditedMetadata(meta ? { ...meta, ...patch } : null);
+    },
+    [meta, setEditedMetadata]
+  );
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
+
+  const handleSaveAs = useCallback(async () => {
+    if (!selectedPath || !editedMetadata) {
+      setToast('请先选择一张图片');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setToast('正在打开保存对话框…（若未看到请尝试 Alt+Tab 切换窗口）');
+    try {
+      const api = window.electronAPI;
+      if (!api?.showSaveDialogWithSuggestedName) {
+        setToast('当前环境不支持另存为');
+        setSaving(false);
+        return;
+      }
+      const nameNoExt = editableFilename.trim() || getBasenameWithoutExt(selectedPath);
+      const target = await api.showSaveDialogWithSuggestedName(selectedPath, nameNoExt);
+      setToast('');
+      if (!target) {
+        setToast('已取消');
+        setSaving(false);
+        return;
+      }
+      const result = await api.saveImageWithMetadata(selectedPath, target, editedMetadata);
+      if (result.ok) {
+        replaceImagePath(selectedPath, target);
+        setToast('已另存为');
+      } else {
+        setError(result.error ?? '保存失败');
+        setToast(result.error ?? '保存失败');
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+      setToast(msg);
+    } finally {
+      setSaving(false);
+    }
+  }, [selectedPath, editedMetadata, editableFilename, setError, replaceImagePath]);
+
+  const handleOverwrite = useCallback(async () => {
+    if (!selectedPath || !editedMetadata) return;
+    setSaving(true);
+    setError(null);
+    const currentBaseNoExt = getBasenameWithoutExt(selectedPath);
+    const nameNoExt = editableFilename.trim() || currentBaseNoExt;
+    const filenameChanged = nameNoExt !== currentBaseNoExt;
+
+    try {
+      if (filenameChanged) {
+        const newPath = await window.electronAPI.buildSavePath(selectedPath, nameNoExt);
+        if (!newPath) {
+          setError('无法构建保存路径');
+        } else if (newPath === selectedPath) {
+          const result = await window.electronAPI.writeImageMetadata(selectedPath, editedMetadata);
+          if (result.ok) setToast('已覆盖保存');
+          else {
+            setError(result.error ?? '保存失败');
+            setToast(result.error ?? '保存失败');
+          }
+        } else {
+          const saveResult = await window.electronAPI.saveImageWithMetadata(selectedPath, newPath, editedMetadata);
+          if (!saveResult.ok) {
+            setError(saveResult.error ?? '保存失败');
+            setToast(saveResult.error ?? '保存失败');
+          } else {
+            replaceImagePath(selectedPath, newPath);
+            setToast('已覆盖保存');
+            const delResult = await window.electronAPI.deleteFile(selectedPath);
+            if (!delResult.ok) {
+              setError(delResult.error ?? '原文件删除失败，请手动删除');
+              setToast('已保存，原文件删除失败');
+            }
+          }
+        }
+      } else {
+        const result = await window.electronAPI.writeImageMetadata(selectedPath, editedMetadata);
+        if (result.ok) setToast('已覆盖保存');
+        else {
+          setError(result.error ?? '保存失败');
+          setToast(result.error ?? '保存失败');
+        }
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+      setToast(msg);
+    } finally {
+      setSaving(false);
+    }
+  }, [selectedPath, editedMetadata, editableFilename, setError, replaceImagePath]);
+
+  if (!selectedPath) {
+    return (
+      <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-700 bg-zinc-900/80">
+        <div className="flex items-center gap-2 border-b border-zinc-700 p-3">
+          <span className="text-sm font-medium text-zinc-400">元数据</span>
+        </div>
+        <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-zinc-500">
+          选择一张图片以查看或编辑元数据
+        </div>
+      </aside>
+    );
+  }
+
+  const label = 'block text-xs font-medium text-zinc-500 mb-1';
+
+  const input =
+    'w-full rounded border border-zinc-600 bg-zinc-800/80 px-2 py-1.5 text-sm text-zinc-200 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50';
+
+  return (
+    <aside className="relative flex w-80 shrink-0 flex-col border-l border-zinc-700 bg-zinc-900/80">
+      <div className="flex h-12 shrink-0 w-full items-center justify-between border-b border-zinc-700 p-3">
+        <span className="text-sm font-medium text-zinc-400">图片信息</span>
+        <button
+          type="button"
+          onClick={() => setShowRawModal(true)}
+          className="shrink-0 rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
+          title="原始信息"
+        >
+          原始信息
+        </button>
+      </div>
+      {showRawModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowRawModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="raw-modal-title"
+        >
+          <div
+            className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg border border-zinc-600 bg-zinc-900 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-zinc-700 px-4 py-3">
+              <h2 id="raw-modal-title" className="text-sm font-medium text-zinc-200">
+                原始信息
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowRawModal(false)}
+                className="rounded p-1 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
+                aria-label="关闭"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+              <pre className="whitespace-pre-wrap break-words font-mono text-xs text-zinc-300">
+                {meta.raw || '（无原始信息）'}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">文件名</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              className={cn(input, 'min-w-0 flex-1')}
+              value={editableFilename}
+              onChange={(e) => setEditableFilename(e.target.value)}
+              placeholder="文件名"
+              title={selectedPath}
+            />
+          </div>
+        </div>
+        <div>
+          <label className={label}>正向提示词</label>
+          <textarea
+            className={cn(input, 'min-h-[280px] resize-y')}
+            value={meta.prompt}
+            onChange={(e) => update({ prompt: e.target.value })}
+            placeholder="Prompt"
+            rows={3}
+          />
+        </div>
+        <div>
+          <label className={label}>负向提示词</label>
+          <textarea
+            className={cn(input, 'min-h-[60px] resize-y')}
+            value={meta.negativePrompt}
+            onChange={(e) => update({ negativePrompt: e.target.value })}
+            placeholder="Negative prompt"
+            rows={2}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={label}>Steps</label>
+            <input
+              type="number"
+              className={input}
+              value={meta.steps ?? ''}
+              onChange={(e) => update({ steps: numOrNull(e.target.value) })}
+              placeholder="20"
+              min={1}
+            />
+          </div>
+          <div>
+            <label className={label}>CFG</label>
+            <input
+              type="number"
+              step="0.5"
+              className={input}
+              value={meta.cfgScale ?? ''}
+              onChange={(e) => update({ cfgScale: floatOrNull(e.target.value) })}
+              placeholder="7"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={label}>Seed</label>
+            <input
+              type="number"
+              className={input}
+              value={meta.seed ?? ''}
+              onChange={(e) => update({ seed: numOrNull(e.target.value) })}
+              placeholder="-"
+            />
+          </div>
+          <div>
+            <label className={label}>Sampler</label>
+            <input
+              type="text"
+              className={input}
+              value={meta.sampler ?? ''}
+              onChange={(e) => update({ sampler: e.target.value || null })}
+              placeholder="Euler a"
+            />
+          </div>
+        </div>
+        <div>
+          <label className={label}>Size</label>
+          <input
+            type="text"
+            className={input}
+            value={meta.size ?? ''}
+            onChange={(e) => update({ size: e.target.value || null })}
+            placeholder="512x512"
+          />
+        </div>
+        <div>
+          <label className={label}>Model</label>
+          <input
+            type="text"
+            className={input}
+            value={meta.model ?? ''}
+            onChange={(e) => update({ model: e.target.value || null })}
+            placeholder=""
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2 border-t border-zinc-700 p-3">
+        <button
+          type="button"
+          onClick={handleOverwrite}
+          disabled={saving}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600/90 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50 cursor-pointer"
+        >
+          <Save className="h-4 w-4" />
+          保存
+        </button>
+        <button
+          type="button"
+          onClick={handleSaveAs}
+          disabled={saving}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 cursor-pointer"
+        >
+          <Copy className="h-4 w-4" />
+          另存为
+        </button>
+      </div>
+      {toast && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg bg-zinc-700 px-4 py-2 text-sm text-zinc-200 shadow-lg">
+          {toast}
+        </div>
+      )}
+    </aside>
+  );
+}

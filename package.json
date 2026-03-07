@@ -1,0 +1,29 @@
+{
+  "name": "image-prompt-manager",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npm run dev -w apps/desktop",
+    "build": "npm run build -w apps/desktop",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/capricorncd/image-prompt-manager.git"
+  },
+  "keywords": [],
+  "author": "Capricorncd",
+  "workspaces": [
+    "apps/*"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/capricorncd/image-prompt-manager/issues"
+  },
+  "homepage": "https://github.com/capricorncd/image-prompt-manager#readme"
+}
