@@ -49,6 +49,7 @@ export function MetadataPanel() {
   const setError = useAppStore((s) => s.setError);
   const replaceImagePath = useAppStore((s) => s.replaceImagePath);
   const selectImage = useAppStore((s) => s.selectImage);
+  const setRawMetadata = useAppStore((s) => s.setRawMetadata);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [editableFilename, setEditableFilename] = useState('');
@@ -131,8 +132,8 @@ export function MetadataPanel() {
           const result = await window.electronAPI.writeImageMetadata(selectedPath, editedMetadata);
           if (result.ok) {
             setToast('已覆盖保存');
-            const fresh = await window.electronAPI.readImageMetadata(selectedPath);
-            selectImage(selectedPath, fresh ?? null);
+            selectImage(selectedPath, result.meta?.parameters ?? null);
+            setRawMetadata(result.meta?.tags ?? {});
           } else {
             setError(result.error ?? '保存失败');
             setToast(result.error ?? '保存失败');
@@ -146,7 +147,7 @@ export function MetadataPanel() {
             replaceImagePath(selectedPath, newPath);
             setToast('已覆盖保存');
             const fresh = await window.electronAPI.readImageMetadata(newPath);
-            selectImage(newPath, fresh ?? null);
+            selectImage(newPath, fresh ? fresh.parameters : null);
             const delResult = await window.electronAPI.deleteFile(selectedPath);
             if (!delResult.ok) {
               setError(delResult.error ?? '原文件删除失败，请手动删除');
@@ -158,8 +159,8 @@ export function MetadataPanel() {
         const result = await window.electronAPI.writeImageMetadata(selectedPath, editedMetadata);
         if (result.ok) {
           setToast('已覆盖保存');
-          const fresh = await window.electronAPI.readImageMetadata(selectedPath);
-          selectImage(selectedPath, fresh ?? null);
+          selectImage(selectedPath, result.meta?.parameters ?? null);
+          setRawMetadata(result.meta?.tags ?? {});
         } else {
           setError(result.error ?? '保存失败');
           setToast(result.error ?? '保存失败');
@@ -231,7 +232,9 @@ export function MetadataPanel() {
               </button>
             </div>
               <div className="min-h-0 flex-1 overflow-auto p-4">
-              <section className="text-xs font-mono text-zinc-300 whitespace-pre-wrap">{JSON.stringify(rawMetadata, null, 2)}</section>
+              <section className="text-xs font-mono text-zinc-300 whitespace-pre-wrap">
+               {JSON.stringify(rawMetadata, null, 2)}
+               </section>
             </div>
           </div>
         </div>
@@ -253,7 +256,7 @@ export function MetadataPanel() {
         <div>
           <label className={label}>UserComment</label>
           <textarea
-            className={cn(input, 'min-h-[280px] resize-y')}
+            className={cn(input, 'min-h-[200px] resize-y')}
             value={meta.userComment}
             onChange={(e) => update({ userComment: e.target.value })}
             placeholder="User Comment"
@@ -263,7 +266,7 @@ export function MetadataPanel() {
         <div>
           <label className={label}>正向提示词</label>
           <textarea
-            className={cn(input, 'min-h-[280px] resize-y')}
+            className={cn(input, 'min-h-[80px] resize-y')}
             value={meta.prompt}
             onChange={(e) => update({ prompt: e.target.value })}
             placeholder="Prompt"

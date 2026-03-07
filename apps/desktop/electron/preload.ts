@@ -66,7 +66,7 @@ const electronAPI = {
     filePath: string,
     meta: import('./types/metadata.js').SDImageMetadata
   ): Promise<{ ok: boolean; error?: string }> {
-    return ipcRenderer.invoke('metadata:write', filePath, meta) as Promise<{ ok: boolean; error?: string }>;
+    return ipcRenderer.invoke('metadata:write', filePath, meta) as Promise<{ ok: boolean; error?: string; meta?: import('./types/metadata.js').PNGMetadata | null }>;
   },
   /** 订阅当前打开目录的文件变更（chokidar 推送，非轮询） */
   onDirChanged(callback: (payload: DirChangedPayload) => void): () => void {

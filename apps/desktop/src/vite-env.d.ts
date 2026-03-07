@@ -28,7 +28,7 @@ declare global {
       writeImageMetadata(
         filePath: string,
         meta: SDImageMetadata
-      ): Promise<{ ok: boolean; error?: string }>;
+      ): Promise<{ ok: boolean; error?: string; meta?: PNGMetadata | null }>;
       onDirChanged(callback: (payload: { event: 'add' | 'unlink' | 'change'; fullPath: string }) => void): () => void;
     };
   }

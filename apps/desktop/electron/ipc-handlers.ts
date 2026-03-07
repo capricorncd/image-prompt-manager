@@ -212,16 +212,22 @@ export function registerIpcHandlers(): void {
     }
   );
 
-  /** 原地覆盖写入（仅在用户明确选择时由前端调用） */
+  /** 原地覆盖写入（仅在用户明确选择时由前端调用）；成功时写后重读并返回最新 meta 供前端刷新 */
   ipcMain.handle(
     'metadata:write',
-    async (_, filePath: string, meta: SDImageMetadata): Promise<{ ok: boolean; error?: string }> => {
+    async (
+      _,
+      filePath: string,
+      meta: SDImageMetadata
+    ): Promise<{ ok: boolean; error?: string; meta?: PNGMetadata | null }> => {
       if (!validateUnderRoot(filePath)) {
         return { ok: false, error: '路径不在当前工作目录内' };
       }
       try {
-        await writeImageInfo(path.resolve(filePath), meta);
-        return { ok: true };
+        const resolved = path.resolve(filePath);
+        await writeImageInfo(resolved, meta);
+        const readBack = await readImageInfo(resolved);
+        return { ok: true, meta: readBack };
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : String(e) };
       }
