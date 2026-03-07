@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron';
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import {
@@ -135,7 +135,8 @@ export function registerIpcHandlers(): void {
       return { ok: false, error: '路径不在当前工作目录内' };
     }
     try {
-      await fs.promises.unlink(path.resolve(filePath));
+      const resolved = path.resolve(filePath);
+      await shell.trashItem(resolved);
       return { ok: true };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };

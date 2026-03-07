@@ -44,6 +44,8 @@ interface AppState {
   resetOnDirChange: () => void;
   /** 另存为后替换列表中的路径并保持选中，用于保持滚动与选中状态 */
   replaceImagePath: (originalPath: string, newPath: string) => void;
+  /** 从列表中移除一张图片（如删除文件后） */
+  removeImagePath: (path: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -119,6 +121,22 @@ export const useAppStore = create<AppState>((set) => ({
       return {
         imagePaths: nextPaths,
         selectedPath: selectedMatch ? newPath : s.selectedPath,
+      };
+    }),
+
+  removeImagePath: (path) =>
+    set((s) => {
+      const norm = (p: string) => p.replace(/\\/g, '/');
+      const target = norm(path);
+      const nextPaths = s.imagePaths.filter((p) => norm(p) !== target);
+      if (nextPaths.length === s.imagePaths.length) return s;
+      const wasSelected = s.selectedPath ? norm(s.selectedPath) === target : false;
+      return {
+        imagePaths: nextPaths,
+        selectedPath: wasSelected ? null : s.selectedPath,
+        metadata: wasSelected ? null : s.metadata,
+        editedMetadata: wasSelected ? null : s.editedMetadata,
+        totalImageCount: s.totalImageCount != null ? s.totalImageCount - 1 : null,
       };
     }),
 

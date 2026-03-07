@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedSizeGrid as Grid } from 'react-window';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import { PAGE_SIZE } from '../stores/app-store';
 import { cn } from '../lib/cn';
@@ -27,9 +27,12 @@ export function ImageGrid() {
   const setLoading = useAppStore((s) => s.setLoading);
   const selectImage = useAppStore((s) => s.selectImage);
   const setRawMetadata = useAppStore((s) => s.setRawMetadata);
+  const removeImagePath = useAppStore((s) => s.removeImagePath);
   const gridRef = useRef<Grid>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 560 });
+  const [pathToDelete, setPathToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadPage = useCallback(
     async (offset: number) => {
@@ -88,6 +91,33 @@ export function ImageGrid() {
     [selectImage, setRawMetadata]
   );
 
+  const handleDeleteClick = useCallback((e: React.MouseEvent, path: string) => {
+    e.stopPropagation();
+    setPathToDelete(path);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!pathToDelete || !window.electronAPI?.deleteFile) return;
+    setDeleting(true);
+    try {
+      const result = await window.electronAPI.deleteFile(pathToDelete);
+      if (result.ok) {
+        removeImagePath(pathToDelete);
+        setPathToDelete(null);
+      } else {
+        window.alert(result.error ?? '删除失败');
+      }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : '删除失败');
+    } finally {
+      setDeleting(false);
+    }
+  }, [pathToDelete, removeImagePath]);
+
+  const handleCancelDelete = useCallback(() => {
+    if (!deleting) setPathToDelete(null);
+  }, [deleting]);
+
   const { width: gridWidth, height: gridHeight } = size;
   const widthForColumns = Math.max(MIN_CELL_SIZE, gridWidth - GAP);
   const columnCount = Math.max(1, Math.floor((widthForColumns + GAP) / (MIN_CELL_SIZE + GAP)));
@@ -113,15 +143,22 @@ export function ImageGrid() {
           }}
           className="flex flex-col"
         >
-          <button
-            type="button"
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => handleSelect(path)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleSelect(path);
+              }
+            }}
             className={cn(
-              'flex flex-1 flex-col overflow-hidden rounded-lg border-2 bg-zinc-800/80 transition-colors',
+              'flex flex-1 flex-col overflow-hidden rounded-lg border-2 bg-zinc-800/80 transition-colors cursor-pointer',
               isSelected ? 'border-emerald-500 ring-1 ring-emerald-500/50' : 'border-transparent hover:border-zinc-600'
             )}
           >
-            <div className="flex aspect-square items-center justify-center overflow-hidden p-1">
+            <div className="relative flex aspect-square items-center justify-center overflow-hidden p-1">
               <img
                 src={`local://image?path=${encodeURIComponent(path)}`}
                 alt=""
@@ -129,15 +166,24 @@ export function ImageGrid() {
                 loading="lazy"
                 decoding="async"
               />
+              <button
+                type="button"
+                onClick={(e) => handleDeleteClick(e, path)}
+                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded bg-zinc-800/90 text-zinc-400 hover:bg-red-600/90 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                title="删除图片"
+                aria-label="删除"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
             <span className="truncate px-1 pb-1 text-center text-xs text-zinc-400" title={name}>
               {name}
             </span>
-          </button>
+          </div>
         </div>
       );
     },
-    [imagePaths, columnCount, selectedPath, handleSelect]
+    [imagePaths, columnCount, selectedPath, handleSelect, handleDeleteClick]
   );
 
   if (!currentDir) {
@@ -190,6 +236,51 @@ export function ImageGrid() {
           {Cell}
         </Grid>
       </div>
+
+      {pathToDelete != null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={handleCancelDelete}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-confirm-title"
+        >
+          <div
+            className="w-full max-w-sm rounded-lg border border-zinc-600 bg-zinc-900 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="delete-confirm-title" className="text-sm font-medium text-zinc-200 border-b border-zinc-700 p-4">
+              删除图片
+            </h2>
+            <section className="p-4">
+              <p className="mt-2 text-sm text-zinc-400">
+                确定要删除该图片吗？此操作不可恢复。
+              </p>
+              <p className="mt-1 truncate text-xs text-zinc-500" title={pathToDelete}>
+                {pathToDelete.replace(/^.*[/\\]/, '')}
+              </p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCancelDelete}
+                  disabled={deleting}
+                  className="rounded px-3 py-1.5 text-sm text-zinc-400 cursor-pointer hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                  className="rounded px-3 py-1.5 text-sm bg-red-600 text-white cursor-pointer hover:bg-red-500 disabled:opacity-50"
+                >
+                  {deleting ? '删除中…' : '确定删除'}
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
