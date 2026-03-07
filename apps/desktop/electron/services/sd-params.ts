@@ -19,7 +19,7 @@ const FIELD_REGEXES: Array<{
 ];
 
 /** 从 SD 参数字符串解析出结构化对象，顺序无关 */
-export function parseSDParameters(raw: string): SDImageMetadata {
+export function parseSDParameters(raw: string, userComment: string): SDImageMetadata {
   const normalized = raw.replace(/\r\n/g, '\n').trim();
   let prompt = '';
   let negativePrompt = '';
@@ -49,6 +49,22 @@ export function parseSDParameters(raw: string): SDImageMetadata {
     parsed[key] = m ? transform(m) : null;
   }
 
+  if (normalized.startsWith('{')) {
+    try {
+      const obj = JSON.parse(normalized) as Record<string, unknown>;
+      if (
+        obj &&
+        typeof obj === 'object' &&
+        !Array.isArray(obj) &&
+        typeof obj['prompt'] === 'string'
+      ) {
+        prompt = obj['prompt'];
+      }
+    } catch {
+      /* 非 JSON 或解析失败，保留上面按行解析的 prompt */
+    }
+  }
+
   return {
     prompt,
     negativePrompt,
@@ -60,6 +76,7 @@ export function parseSDParameters(raw: string): SDImageMetadata {
     modelHash: (parsed['modelHash'] as string | null) ?? null,
     model: (parsed['model'] as string | null) ?? null,
     raw: normalized,
+    userComment,
   };
 }
 

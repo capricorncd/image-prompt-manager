@@ -15,6 +15,7 @@ const EMPTY_METADATA: SDImageMetadata = {
   modelHash: null,
   model: null,
   raw: '',
+  userComment: '',
 };
 
 interface AppState {
@@ -24,6 +25,7 @@ interface AppState {
   hasMore: boolean;
   loading: boolean;
   selectedPath: string | null;
+  rawMetadata: Record<string, unknown>;
   metadata: SDImageMetadata | null;
   editedMetadata: SDImageMetadata | null;
   error: string | null;
@@ -34,6 +36,7 @@ interface AppState {
   clearImages: () => void;
   setLoading: (v: boolean) => void;
   selectImage: (path: string | null, meta: SDImageMetadata | null) => void;
+  setRawMetadata: (tags: Record<string, unknown>) => void;
   setEditedMetadata: (meta: SDImageMetadata | null) => void;
   setError: (msg: string | null) => void;
   resetOnDirChange: () => void;
@@ -48,6 +51,7 @@ export const useAppStore = create<AppState>((set) => ({
   hasMore: false,
   loading: false,
   selectedPath: null,
+  rawMetadata: {},
   metadata: null,
   editedMetadata: null,
   error: null,
@@ -109,6 +113,8 @@ export const useAppStore = create<AppState>((set) => ({
         selectedPath: selectedMatch ? newPath : s.selectedPath,
       };
     }),
+
+  setRawMetadata: (tags) => set({ rawMetadata: tags }),
 }));
 
 export { PAGE_SIZE };

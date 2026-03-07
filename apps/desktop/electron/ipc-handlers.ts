@@ -6,6 +6,7 @@ import {
   writeImageInfo,
   saveImageWithMetadata,
   endExifTool,
+  getEmptyParameters,
 } from './services/metadata-service.js';
 import {
   listImageFiles,
@@ -13,7 +14,7 @@ import {
   watchDirectory,
   isPathUnderBase,
 } from './services/file-service.js';
-import type { SDImageMetadata } from './types/metadata.js';
+import type { SDImageMetadata, PNGMetadata } from './types/metadata.js';
 import {
   addOpenedRoot,
   removeOpenedRoot,
@@ -175,8 +176,8 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  ipcMain.handle('metadata:read', async (_, filePath: string): Promise<SDImageMetadata | null> => {
-    if (!validateUnderRoot(filePath)) return null;
+  ipcMain.handle('metadata:read', async (_, filePath: string): Promise<PNGMetadata> => {
+    if (!validateUnderRoot(filePath)) return { tags: {}, parameters: getEmptyParameters() };
     return readImageInfo(path.resolve(filePath));
   });
 

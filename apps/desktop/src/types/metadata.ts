@@ -10,4 +10,5 @@ export interface SDImageMetadata {
   modelHash: string | null;
   model: string | null;
   raw: string;
+  userComment: string;
 }

@@ -22,4 +22,11 @@ export interface SDImageMetadata {
   model: string | null;
   /** 原始参数字符串（未解析部分或完整备份） */
   raw: string;
+  /** 可选的用户备注字段，优先使用 EXIF UserComment 存储，不覆盖原有 SD 参数字段 */
+  userComment: string;
+}
+
+export interface PNGMetadata {
+  tags: Record<string, unknown>;
+  parameters: SDImageMetadata;
 }

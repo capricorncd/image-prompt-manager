@@ -4,3 +4,9 @@ body {
   margin: 0;
   overflow: hidden;
 }
+
+/* 隐藏垂直滚动条 */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 8px;
+}

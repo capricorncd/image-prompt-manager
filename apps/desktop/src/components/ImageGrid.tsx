@@ -4,8 +4,11 @@ import { useAppStore } from '../stores/app-store';
 import { PAGE_SIZE } from '../stores/app-store';
 import { cn } from '../lib/cn';
 
-const CELL_SIZE = 140;
 const GAP = 8;
+const MIN_CELL_SIZE = 100;
+const CAPTION_HEIGHT = 24;
+/** 预留垂直滚动条宽度，避免出现横向滚动条 */
+const SCROLLBAR_WIDTH = 17;
 
 interface CellProps {
   columnIndex: number;
@@ -22,6 +25,7 @@ export function ImageGrid() {
   const appendImages = useAppStore((s) => s.appendImages);
   const setLoading = useAppStore((s) => s.setLoading);
   const selectImage = useAppStore((s) => s.selectImage);
+  const setRawMetadata = useAppStore((s) => s.setRawMetadata);
   const gridRef = useRef<Grid>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 560 });
@@ -71,13 +75,17 @@ export function ImageGrid() {
   const handleSelect = useCallback(
     async (path: string) => {
       const meta = await window.electronAPI.readImageMetadata(path);
-      selectImage(path, meta ?? null);
+      selectImage(path, meta.parameters);
+      setRawMetadata(meta.tags);
     },
-    [selectImage]
+    [selectImage, setRawMetadata]
   );
 
   const { width: gridWidth, height: gridHeight } = size;
-  const columnCount = Math.max(1, Math.floor(gridWidth / (CELL_SIZE + GAP)));
+  const widthForColumns = Math.max(MIN_CELL_SIZE, gridWidth - GAP);
+  const columnCount = Math.max(1, Math.floor((widthForColumns + GAP) / (MIN_CELL_SIZE + GAP)));
+  const columnWidth = widthForColumns / columnCount;
+  const rowHeight = columnWidth + GAP + CAPTION_HEIGHT;
   const rowCount = Math.ceil(imagePaths.length / columnCount) || 1;
 
   const Cell = useCallback(
@@ -145,14 +153,15 @@ export function ImageGrid() {
         <Grid
           ref={gridRef}
           columnCount={columnCount}
-          columnWidth={CELL_SIZE + GAP}
+          columnWidth={columnWidth}
           rowCount={rowCount}
-          rowHeight={CELL_SIZE + GAP + 24}
+          rowHeight={rowHeight}
           height={gridHeight}
-          width={gridWidth}
+          width={widthForColumns}
           overscanRowCount={3}
+          style={{ overflowX: 'hidden' }}
           onScroll={({ scrollTop }) => {
-            const totalHeight = rowCount * (CELL_SIZE + GAP + 24);
+            const totalHeight = rowCount * rowHeight;
             if (totalHeight - scrollTop - gridHeight < 300) loadMore();
           }}
         >

@@ -47,8 +47,8 @@ const electronAPI = {
     return ipcRenderer.invoke('dialog:saveFile', defaultPath) as Promise<string | null>;
   },
   /** 读取图片 SD 元数据（优先 PNG parameters，其次 EXIF UserComment） */
-  readImageMetadata(filePath: string): Promise<import('./types/metadata.js').SDImageMetadata | null> {
-    return ipcRenderer.invoke('metadata:read', filePath) as Promise<import('./types/metadata.js').SDImageMetadata | null>;
+  readImageMetadata(filePath: string): Promise<import('./types/metadata.js').PNGMetadata | null> {
+    return ipcRenderer.invoke('metadata:read', filePath) as Promise<import('./types/metadata.js').PNGMetadata | null>;
   },
   /** 另存为：复制到新路径并写入元数据，不覆盖原图 */
   saveImageWithMetadata(

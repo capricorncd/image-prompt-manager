@@ -16,6 +16,7 @@ function emptyMeta(): SDImageMetadata {
     modelHash: null,
     model: null,
     raw: '',
+    userComment: '',
   };
 }
 
@@ -43,9 +44,11 @@ function getBasenameWithoutExt(filePath: string): string {
 export function MetadataPanel() {
   const selectedPath = useAppStore((s) => s.selectedPath);
   const editedMetadata = useAppStore((s) => s.editedMetadata);
+  const rawMetadata = useAppStore((s) => s.rawMetadata);
   const setEditedMetadata = useAppStore((s) => s.setEditedMetadata);
   const setError = useAppStore((s) => s.setError);
   const replaceImagePath = useAppStore((s) => s.replaceImagePath);
+  const selectImage = useAppStore((s) => s.selectImage);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [editableFilename, setEditableFilename] = useState('');
@@ -126,8 +129,11 @@ export function MetadataPanel() {
           setError('无法构建保存路径');
         } else if (newPath === selectedPath) {
           const result = await window.electronAPI.writeImageMetadata(selectedPath, editedMetadata);
-          if (result.ok) setToast('已覆盖保存');
-          else {
+          if (result.ok) {
+            setToast('已覆盖保存');
+            const fresh = await window.electronAPI.readImageMetadata(selectedPath);
+            selectImage(selectedPath, fresh ?? null);
+          } else {
             setError(result.error ?? '保存失败');
             setToast(result.error ?? '保存失败');
           }
@@ -139,6 +145,8 @@ export function MetadataPanel() {
           } else {
             replaceImagePath(selectedPath, newPath);
             setToast('已覆盖保存');
+            const fresh = await window.electronAPI.readImageMetadata(newPath);
+            selectImage(newPath, fresh ?? null);
             const delResult = await window.electronAPI.deleteFile(selectedPath);
             if (!delResult.ok) {
               setError(delResult.error ?? '原文件删除失败，请手动删除');
@@ -148,8 +156,11 @@ export function MetadataPanel() {
         }
       } else {
         const result = await window.electronAPI.writeImageMetadata(selectedPath, editedMetadata);
-        if (result.ok) setToast('已覆盖保存');
-        else {
+        if (result.ok) {
+          setToast('已覆盖保存');
+          const fresh = await window.electronAPI.readImageMetadata(selectedPath);
+          selectImage(selectedPath, fresh ?? null);
+        } else {
           setError(result.error ?? '保存失败');
           setToast(result.error ?? '保存失败');
         }
@@ -161,7 +172,7 @@ export function MetadataPanel() {
     } finally {
       setSaving(false);
     }
-  }, [selectedPath, editedMetadata, editableFilename, setError, replaceImagePath]);
+  }, [selectedPath, editedMetadata, editableFilename, setError, replaceImagePath, selectImage]);
 
   if (!selectedPath) {
     return (
@@ -219,10 +230,8 @@ export function MetadataPanel() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto p-4">
-              <pre className="whitespace-pre-wrap break-words font-mono text-xs text-zinc-300">
-                {meta.raw || '（无原始信息）'}
-              </pre>
+              <div className="min-h-0 flex-1 overflow-auto p-4">
+              <section className="text-xs font-mono text-zinc-300 whitespace-pre-wrap">{JSON.stringify(rawMetadata, null, 2)}</section>
             </div>
           </div>
         </div>
@@ -240,6 +249,16 @@ export function MetadataPanel() {
               title={selectedPath}
             />
           </div>
+        </div>
+        <div>
+          <label className={label}>UserComment</label>
+          <textarea
+            className={cn(input, 'min-h-[280px] resize-y')}
+            value={meta.userComment}
+            onChange={(e) => update({ userComment: e.target.value })}
+            placeholder="User Comment"
+            rows={3}
+          />
         </div>
         <div>
           <label className={label}>正向提示词</label>

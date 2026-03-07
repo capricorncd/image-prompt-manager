@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { SDImageMetadata } from './types/metadata';
+import type { SDImageMetadata, PNGMetadata } from './types/metadata';
 
 /** 与 electron/preload.ts 暴露的 API 保持一致 */
 declare global {
@@ -19,7 +19,7 @@ declare global {
       buildSavePath(originalPath: string, nameNoExt: string): Promise<string>;
       showSaveDialogWithSuggestedName(originalPath: string, nameNoExt: string): Promise<string | null>;
       showSaveDialog(defaultPath: string): Promise<string | null>;
-      readImageMetadata(filePath: string): Promise<SDImageMetadata | null>;
+      readImageMetadata(filePath: string): Promise<PNGMetadata>;
       saveImageWithMetadata(
         originalPath: string,
         targetPath: string,
