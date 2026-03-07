@@ -6,6 +6,10 @@
 
 > Windows测试只能修改UserComment, SD的Praramaters修改后无法保存图片。
 
+![Image Prompt Manager](docs/logo.png)
+
+![Image Prompt Manager](docs/screenshot.png)
+
 ## 技术栈
 
 | 层级     | 技术 |
