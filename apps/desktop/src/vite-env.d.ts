@@ -15,7 +15,7 @@ declare global {
         dirPath: string,
         offset: number,
         limit: number
-      ): Promise<{ entries: string[]; hasMore: boolean }>;
+      ): Promise<{ entries: string[]; hasMore: boolean; total: number }>;
       listDirs(dirPath: string): Promise<string[]>;
       removeDirectory(dirPath: string): Promise<void>;
       deleteFile(filePath: string): Promise<{ ok: boolean; error?: string }>;

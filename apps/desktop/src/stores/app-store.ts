@@ -23,6 +23,8 @@ interface AppState {
   currentDir: string | null;
   imagePaths: string[];
   hasMore: boolean;
+  /** 当前文件夹内图片总数（首次分页时由 listImages 返回） */
+  totalImageCount: number | null;
   loading: boolean;
   selectedPath: string | null;
   rawMetadata: Record<string, unknown>;
@@ -32,7 +34,7 @@ interface AppState {
   addDirectory: (dir: string) => void;
   removeDirectory: (dir: string) => void;
   setCurrentDir: (dir: string | null) => void;
-  appendImages: (paths: string[], hasMore: boolean) => void;
+  appendImages: (paths: string[], hasMore: boolean, total?: number) => void;
   clearImages: () => void;
   setLoading: (v: boolean) => void;
   selectImage: (path: string | null, meta: SDImageMetadata | null) => void;
@@ -49,6 +51,7 @@ export const useAppStore = create<AppState>((set) => ({
   currentDir: null,
   imagePaths: [],
   hasMore: false,
+  totalImageCount: null,
   loading: false,
   selectedPath: null,
   rawMetadata: {},
@@ -73,6 +76,7 @@ export const useAppStore = create<AppState>((set) => ({
         currentDir: nextCurrent,
         imagePaths: nextCurrent === s.currentDir ? s.imagePaths : [],
         hasMore: false,
+        totalImageCount: nextCurrent === s.currentDir ? s.totalImageCount : null,
         selectedPath: null,
         metadata: null,
         editedMetadata: null,
@@ -80,12 +84,16 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   setCurrentDir: (dir) =>
-    set({ currentDir: dir, imagePaths: [], hasMore: false, selectedPath: null, metadata: null, editedMetadata: null }),
+    set({ currentDir: dir, imagePaths: [], hasMore: false, totalImageCount: null, selectedPath: null, metadata: null, editedMetadata: null }),
 
-  appendImages: (paths, hasMore) =>
-    set((s) => ({ imagePaths: [...s.imagePaths, ...paths], hasMore })),
+  appendImages: (paths, hasMore, total) =>
+    set((s) => ({
+      imagePaths: [...s.imagePaths, ...paths],
+      hasMore,
+      ...(total !== undefined && { totalImageCount: total }),
+    })),
 
-  clearImages: () => set({ imagePaths: [], hasMore: false }),
+  clearImages: () => set({ imagePaths: [], hasMore: false, totalImageCount: null }),
 
   setLoading: (v) => set({ loading: v }),
 
@@ -97,7 +105,7 @@ export const useAppStore = create<AppState>((set) => ({
   setError: (msg) => set({ error: msg }),
 
   resetOnDirChange: () =>
-    set({ imagePaths: [], hasMore: false, selectedPath: null, metadata: null, editedMetadata: null }),
+    set({ imagePaths: [], hasMore: false, totalImageCount: null, selectedPath: null, metadata: null, editedMetadata: null }),
 
   replaceImagePath: (originalPath, newPath) =>
     set((s) => {

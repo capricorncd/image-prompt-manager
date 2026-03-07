@@ -19,6 +19,7 @@ export function ImageGrid() {
   const currentDir = useAppStore((s) => s.currentDir);
   const imagePaths = useAppStore((s) => s.imagePaths);
   const hasMore = useAppStore((s) => s.hasMore);
+  const totalImageCount = useAppStore((s) => s.totalImageCount);
   const loading = useAppStore((s) => s.loading);
   const selectedPath = useAppStore((s) => s.selectedPath);
   const appendImages = useAppStore((s) => s.appendImages);
@@ -35,12 +36,12 @@ export function ImageGrid() {
       if (!currentDir || !window.electronAPI?.listImages) return;
       setLoading(true);
       try {
-        const { entries, hasMore: more } = await window.electronAPI.listImages(
+        const { entries, hasMore: more, total } = await window.electronAPI.listImages(
           currentDir,
           offset,
           PAGE_SIZE
         );
-        appendImages(entries, more);
+        appendImages(entries, more, total);
       } finally {
         setLoading(false);
       }
@@ -151,7 +152,7 @@ export function ImageGrid() {
     <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-900">
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-zinc-700 px-3">
         <span className="text-sm text-zinc-400">
-          共 {imagePaths.length} 张{hasMore ? '+' : ''}
+          共 {totalImageCount ?? imagePaths.length} 张{totalImageCount == null && hasMore ? '+' : ''}
         </span>
         <div className="flex items-center gap-2">
           {loading && <span className="text-xs text-zinc-500">加载中…</span>}

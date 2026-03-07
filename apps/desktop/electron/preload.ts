@@ -27,11 +27,12 @@ const electronAPI = {
   addDirectoryByPath(dirPath: string): Promise<string | null> {
     return ipcRenderer.invoke('dialog:addDirectoryByPath', dirPath) as Promise<string | null>;
   },
-  /** 分页列出目录中的图片路径，避免大目录一次性加载 */
-  listImages(dirPath: string, offset: number, limit: number): Promise<{ entries: string[]; hasMore: boolean }> {
+  /** 分页列出目录中的图片路径，避免大目录一次性加载；total 为当前文件夹内图片总数 */
+  listImages(dirPath: string, offset: number, limit: number): Promise<{ entries: string[]; hasMore: boolean; total: number }> {
     return ipcRenderer.invoke('fs:listImages', dirPath, offset, limit) as Promise<{
       entries: string[];
       hasMore: boolean;
+      total: number;
     }>;
   },
   /** 列出目录下一层子目录路径，用于左侧目录树 */
