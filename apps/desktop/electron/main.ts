@@ -1,4 +1,5 @@
 import { app, BrowserWindow, shell, protocol, net } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { registerIpcHandlers, onAppQuit } from './ipc-handlers.js';
@@ -10,12 +11,28 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 const PRELOAD_SCRIPT = path.join(__dirname, 'preload.js');
 
+/** 窗口图标路径：开发时从 build 目录读，打包后从 resources/build 读；Windows 优先 .ico，无则用 .png */
+function getWindowIconPath(): string | undefined {
+  const baseDir = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..');
+  const pngPath = path.join(baseDir, 'build', 'icon.png');
+  const icoPath = path.join(baseDir, 'build', 'icon.ico');
+  if (process.platform === 'win32') {
+    if (fs.existsSync(icoPath)) return icoPath;
+    if (fs.existsSync(pngPath)) return pngPath;
+  } else {
+    if (fs.existsSync(pngPath)) return pngPath;
+  }
+  return undefined;
+}
+
 function createWindow(): void {
+  const iconPath = getWindowIconPath();
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    ...(iconPath && { icon: iconPath }),
     webPreferences: {
       preload: PRELOAD_SCRIPT,
       nodeIntegration: false,
