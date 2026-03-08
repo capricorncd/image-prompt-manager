@@ -89,6 +89,14 @@ const electronAPI = {
       ipcRenderer.removeListener('fs:dir-changed', handler);
     };
   },
+  /** 订阅语言切换（File > Language 菜单触发） */
+  onLocaleChange(callback: (locale: string) => void): () => void {
+    const handler = (_: unknown, locale: string) => callback(locale);
+    ipcRenderer.on('app:locale', handler);
+    return () => {
+      ipcRenderer.removeListener('app:locale', handler);
+    };
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

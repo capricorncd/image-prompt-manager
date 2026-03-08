@@ -3,6 +3,7 @@ import { Save, Copy, X, ImageIcon } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import type { SDImageMetadata } from '../types/metadata';
 import { cn } from '../lib/cn';
+import { t } from '../i18n';
 
 function emptyMeta(): SDImageMetadata {
   return {
@@ -50,6 +51,7 @@ export function MetadataPanel() {
   const replaceImagePath = useAppStore((s) => s.replaceImagePath);
   const selectImage = useAppStore((s) => s.selectImage);
   const setRawMetadata = useAppStore((s) => s.setRawMetadata);
+  useAppStore((s) => s.locale);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [editableFilename, setEditableFilename] = useState('');
@@ -78,16 +80,16 @@ export function MetadataPanel() {
 
   const handleSaveAs = useCallback(async () => {
     if (!selectedPath || !editedMetadata) {
-      setToast('请先选择一张图片');
+      setToast(t('meta.selectImageFirst'));
       return;
     }
     setSaving(true);
     setError(null);
-    setToast('正在打开保存对话框…（若未看到请尝试 Alt+Tab 切换窗口）');
+    setToast(t('meta.saveDialogOpening'));
     try {
       const api = window.electronAPI;
       if (!api?.showSaveDialogWithSuggestedName) {
-        setToast('当前环境不支持另存为');
+        setToast(t('meta.saveAsUnsupported'));
         setSaving(false);
         return;
       }
@@ -95,7 +97,7 @@ export function MetadataPanel() {
       const target = await api.showSaveDialogWithSuggestedName(selectedPath, nameNoExt);
       setToast('');
       if (!target) {
-        setToast('已取消');
+        setToast(t('meta.cancelled'));
         setSaving(false);
         return;
       }
@@ -106,10 +108,10 @@ export function MetadataPanel() {
         // const fresh = await window.electronAPI.readImageMetadata(target);
         // selectImage(target, fresh ? fresh.parameters : null);
         // setRawMetadata(fresh?.tags ?? {});
-        setToast('已另存为');
+        setToast(t('meta.savedAs'));
       } else {
-        setError(result.error ?? '保存失败');
-        setToast(result.error ?? '保存失败');
+        setError(result.error ?? t('meta.saveFailed'));
+        setToast(result.error ?? t('meta.saveFailed'));
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -132,44 +134,44 @@ export function MetadataPanel() {
       if (filenameChanged) {
         const newPath = await window.electronAPI.buildSavePath(selectedPath, nameNoExt);
         if (!newPath) {
-          setError('无法构建保存路径');
+          setError(t('meta.cannotBuildPath'));
         } else if (newPath === selectedPath) {
           const result = await window.electronAPI.writeImageMetadata(selectedPath, editedMetadata);
           if (result.ok) {
-            setToast('已覆盖保存');
+            setToast(t('meta.saved'));
             selectImage(selectedPath, result.meta?.parameters ?? null);
             setRawMetadata(result.meta?.tags ?? {});
           } else {
-            setError(result.error ?? '保存失败');
-            setToast(result.error ?? '保存失败');
+        setError(result.error ?? t('meta.saveFailed'));
+        setToast(result.error ?? t('meta.saveFailed'));
           }
         } else {
           const saveResult = await window.electronAPI.saveImageWithMetadata(selectedPath, newPath, editedMetadata);
           if (!saveResult.ok) {
-            setError(saveResult.error ?? '保存失败');
-            setToast(saveResult.error ?? '保存失败');
+            setError(saveResult.error ?? t('meta.saveFailed'));
+            setToast(saveResult.error ?? t('meta.saveFailed'));
           } else {
             replaceImagePath(selectedPath, newPath);
-            setToast('已覆盖保存');
+            setToast(t('meta.saved'));
             const fresh = await window.electronAPI.readImageMetadata(newPath);
             selectImage(newPath, fresh ? fresh.parameters : null);
             setRawMetadata(fresh?.tags ?? {});
             const delResult = await window.electronAPI.deleteFile(selectedPath);
             if (!delResult.ok) {
-              setError(delResult.error ?? '原文件删除失败，请手动删除');
-              setToast('已保存，原文件删除失败');
+              setError(delResult.error ?? t('meta.originalDeleteFailed'));
+              setToast(t('meta.savedButOriginalDeleteFailed'));
             }
           }
         }
       } else {
         const result = await window.electronAPI.writeImageMetadata(selectedPath, editedMetadata);
         if (result.ok) {
-          setToast('已覆盖保存');
+          setToast(t('meta.saved'));
           selectImage(selectedPath, result.meta?.parameters ?? null);
           setRawMetadata(result.meta?.tags ?? {});
         } else {
-          setError(result.error ?? '保存失败');
-          setToast(result.error ?? '保存失败');
+        setError(result.error ?? t('meta.saveFailed'));
+        setToast(result.error ?? t('meta.saveFailed'));
         }
       }
     } catch (e) {
@@ -184,11 +186,11 @@ export function MetadataPanel() {
   if (!selectedPath) {
     return (
       <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-700 bg-zinc-900/80">
-        <div className="flex items-center gap-2 border-b border-zinc-700 p-3">
-          <span className="text-sm font-medium text-zinc-400">元数据</span>
+        <div className="flex items-center gap-2 border-b border-zinc-700 p-3 h-12">
+          <span className="text-sm font-medium text-zinc-400">{t('meta.title')}</span>
         </div>
         <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-zinc-500">
-          选择一张图片以查看或编辑元数据
+          {t('meta.selectFirst')}
         </div>
       </aside>
     );
@@ -202,24 +204,24 @@ export function MetadataPanel() {
   return (
     <aside className="relative flex w-80 shrink-0 flex-col border-l border-zinc-700 bg-zinc-900/80">
       <div className="flex h-12 shrink-0 w-full items-center justify-between border-b border-zinc-700 p-3">
-        <span className="text-sm font-medium text-zinc-400">图片信息</span>
+        <span className="text-sm font-medium text-zinc-400">{t('meta.imageInfo')}</span>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setShowLargeImageModal(true)}
             className="shrink-0 flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
-            title="查看大图"
+            title={t('meta.viewLarge')}
           >
             <ImageIcon className="h-3.5 w-3.5" />
-            查看大图
+            {t('meta.viewLarge')}
           </button>
           <button
             type="button"
             onClick={() => setShowRawModal(true)}
             className="shrink-0 rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
-            title="原始信息"
+            title={t('meta.rawInfo')}
           >
-            原始信息
+            {t('meta.rawInfo')}
           </button>
         </div>
       </div>
@@ -243,7 +245,7 @@ export function MetadataPanel() {
                 type="button"
                 onClick={() => setShowLargeImageModal(false)}
                 className="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
-                aria-label="关闭"
+                aria-label={t('meta.close')}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -272,13 +274,13 @@ export function MetadataPanel() {
           >
             <div className="flex shrink-0 items-center justify-between border-b border-zinc-700 px-4 py-3">
               <h2 id="raw-modal-title" className="text-sm font-medium text-zinc-200">
-                原始信息
+                {t('meta.rawInfo')}
               </h2>
               <button
                 type="button"
                 onClick={() => setShowRawModal(false)}
                 className="rounded p-1 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
-                aria-label="关闭"
+                aria-label={t('meta.close')}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -293,14 +295,14 @@ export function MetadataPanel() {
       )}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-500">文件名</label>
+          <label className="mb-1 block text-xs font-medium text-zinc-500">{t('meta.filename')}</label>
           <div className="flex items-center gap-2">
             <input
               type="text"
               className={cn(input, 'min-w-0 flex-1')}
               value={editableFilename}
               onChange={(e) => setEditableFilename(e.target.value)}
-              placeholder="文件名"
+              placeholder={t('meta.filenamePlaceholder')}
               title={selectedPath}
             />
           </div>
@@ -310,7 +312,7 @@ export function MetadataPanel() {
           </div>
         </div>
         <div>
-          <label className={label}>UserComment</label>
+          <label className={label}>{t('meta.userComment')}</label>
           <textarea
             className={cn(input, 'min-h-[200px] resize-y')}
             value={meta.userComment}
@@ -320,7 +322,7 @@ export function MetadataPanel() {
           />
         </div>
         <div>
-          <label className={label}>正向提示词</label>
+          <label className={label}>{t('meta.prompt')}</label>
           <textarea
             className={cn(input, 'min-h-[80px] resize-y')}
             value={meta.prompt}
@@ -330,7 +332,7 @@ export function MetadataPanel() {
           />
         </div>
         <div>
-          <label className={label}>负向提示词</label>
+          <label className={label}>{t('meta.negativePrompt')}</label>
           <textarea
             className={cn(input, 'min-h-[60px] resize-y')}
             value={meta.negativePrompt}
@@ -341,7 +343,7 @@ export function MetadataPanel() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className={label}>Steps</label>
+            <label className={label}>{t('meta.steps')}</label>
             <input
               type="number"
               className={input}
@@ -352,7 +354,7 @@ export function MetadataPanel() {
             />
           </div>
           <div>
-            <label className={label}>CFG</label>
+            <label className={label}>{t('meta.cfg')}</label>
             <input
               type="number"
               step="0.5"
@@ -365,7 +367,7 @@ export function MetadataPanel() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className={label}>Seed</label>
+            <label className={label}>{t('meta.seed')}</label>
             <input
               type="number"
               className={input}
@@ -375,7 +377,7 @@ export function MetadataPanel() {
             />
           </div>
           <div>
-            <label className={label}>Sampler</label>
+            <label className={label}>{t('meta.sampler')}</label>
             <input
               type="text"
               className={input}
@@ -386,7 +388,7 @@ export function MetadataPanel() {
           </div>
         </div>
         <div>
-          <label className={label}>Size</label>
+          <label className={label}>{t('meta.size')}</label>
           <input
             type="text"
             className={input}
@@ -396,7 +398,7 @@ export function MetadataPanel() {
           />
         </div>
         <div>
-          <label className={label}>Model</label>
+          <label className={label}>{t('meta.model')}</label>
           <input
             type="text"
             className={input}
@@ -414,7 +416,7 @@ export function MetadataPanel() {
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600/90 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50 cursor-pointer"
         >
           <Save className="h-4 w-4" />
-          保存
+          {t('meta.save')}
         </button>
         <button
           type="button"
@@ -423,7 +425,7 @@ export function MetadataPanel() {
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 cursor-pointer"
         >
           <Copy className="h-4 w-4" />
-          另存为
+          {t('meta.saveAs')}
         </button>
       </div>
       {toast && (

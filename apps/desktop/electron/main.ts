@@ -2,7 +2,7 @@ import { app, BrowserWindow, nativeImage, shell, protocol, net } from 'electron'
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { registerIpcHandlers, onAppQuit } from './ipc-handlers.js';
+import { registerIpcHandlers, onAppQuit, setupAppMenu } from './ipc-handlers.js';
 import { validatePathUnderRoot } from './shared-state.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -84,6 +84,7 @@ app.whenReady().then(() => {
   registerLocalImageProtocol();
   registerIpcHandlers();
   createWindow();
+  setupAppMenu();
 });
 
 app.on('window-all-closed', () => {

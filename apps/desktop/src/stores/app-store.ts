@@ -1,5 +1,20 @@
 import { create } from 'zustand';
 import type { SDImageMetadata } from '../types/metadata';
+import type { Locale } from '../i18n';
+import { setLocale as setI18nLocale } from '../i18n';
+
+const LOCALE_KEY = 'image-prompt-manager:locale';
+function getInitialLocale(): Locale {
+  try {
+    const s = localStorage.getItem(LOCALE_KEY);
+    if (s === 'zh' || s === 'en' || s === 'ja') return s;
+  } catch {
+    // ignore
+  }
+  return 'zh';
+}
+const initialLocale = getInitialLocale();
+setI18nLocale(initialLocale);
 
 const PAGE_SIZE = 50;
 
@@ -48,6 +63,8 @@ interface AppState {
   removeImagePath: (path: string) => void;
   /** 启动时恢复目录列表（仅用于从持久化恢复） */
   restoreDirectories: (dirs: string[], currentDir: string | null) => void;
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -62,6 +79,17 @@ export const useAppStore = create<AppState>((set) => ({
   metadata: null,
   editedMetadata: null,
   error: null,
+  locale: initialLocale,
+
+  setLocale: (locale) => {
+    try {
+      localStorage.setItem(LOCALE_KEY, locale);
+    } catch {
+      // ignore
+    }
+    setI18nLocale(locale);
+    set({ locale });
+  },
 
   addDirectory: (dir) =>
     set((s) => {

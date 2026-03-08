@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import {
@@ -267,6 +267,36 @@ export function registerIpcHandlers(): void {
       }
     }
   );
+}
+
+/** 设置应用菜单：File 下增加语言子菜单（中文 / English / 日本語） */
+export function setupAppMenu(): void {
+  const sendLocale = (locale: string) => {
+    getMainWindow()?.webContents.send('app:locale', locale);
+  };
+  const template: Parameters<typeof Menu.buildFromTemplate>[0] = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Language',
+          submenu: [
+            { label: '中文', click: () => sendLocale('zh') },
+            { label: 'English', click: () => sendLocale('en') },
+            { label: '日本語', click: () => sendLocale('ja') },
+          ],
+        },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    },
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    { role: 'windowMenu' },
+    { role: 'help' },
+  ];
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
 
 export async function onAppQuit(): Promise<void> {

@@ -3,11 +3,23 @@ import { DirectorySidebar } from './DirectorySidebar';
 import { ImageGrid } from './ImageGrid';
 import { MetadataPanel } from './MetadataPanel';
 import { useAppStore, getPersistedDirectories } from '../stores/app-store';
+import type { Locale } from '../i18n';
 
 export function Layout() {
   const directoryList = useAppStore((s) => s.directoryList);
   const restoreDirectories = useAppStore((s) => s.restoreDirectories);
+  const setLocale = useAppStore((s) => s.setLocale);
   const hasRestored = useRef(false);
+
+  useEffect(() => {
+    if (!window.electronAPI?.onLocaleChange) return;
+    const unsub = window.electronAPI.onLocaleChange((locale: string) => {
+      if (locale === 'zh' || locale === 'en' || locale === 'ja') {
+        setLocale(locale as Locale);
+      }
+    });
+    return unsub;
+  }, [setLocale]);
 
   useEffect(() => {
     if (hasRestored.current) return;

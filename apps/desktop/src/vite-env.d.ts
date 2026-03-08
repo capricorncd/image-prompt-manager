@@ -33,6 +33,8 @@ declare global {
         meta: SDImageMetadata
       ): Promise<{ ok: boolean; error?: string; meta?: PNGMetadata | null }>;
       onDirChanged(callback: (payload: { event: 'add' | 'unlink' | 'change'; fullPath: string }) => void): () => void;
+      /** 订阅语言切换（File > Language 菜单） */
+      onLocaleChange(callback: (locale: string) => void): () => void;
     };
   }
 }

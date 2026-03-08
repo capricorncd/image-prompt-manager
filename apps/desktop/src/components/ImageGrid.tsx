@@ -4,6 +4,7 @@ import { RefreshCw, X } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import { PAGE_SIZE } from '../stores/app-store';
 import { cn } from '../lib/cn';
+import { t } from '../i18n';
 
 const GAP = 8;
 const MIN_CELL_SIZE = 100;
@@ -28,6 +29,7 @@ export function ImageGrid() {
   const selectImage = useAppStore((s) => s.selectImage);
   const setRawMetadata = useAppStore((s) => s.setRawMetadata);
   const removeImagePath = useAppStore((s) => s.removeImagePath);
+  const locale = useAppStore((s) => s.locale);
   const gridRef = useRef<Grid>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 560 });
@@ -105,10 +107,10 @@ export function ImageGrid() {
         removeImagePath(pathToDelete);
         setPathToDelete(null);
       } else {
-        window.alert(result.error ?? '删除失败');
+        window.alert(result.error ?? t('grid.deleteFailed'));
       }
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : '删除失败');
+      window.alert(err instanceof Error ? err.message : t('grid.deleteFailed'));
     } finally {
       setDeleting(false);
     }
@@ -170,8 +172,8 @@ export function ImageGrid() {
                 type="button"
                 onClick={(e) => handleDeleteClick(e, path)}
                 className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded bg-zinc-800/90 text-zinc-400 hover:bg-red-600/90 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                title="删除图片"
-                aria-label="删除"
+                title={t('grid.deleteImage')}
+                aria-label={t('sidebar.remove')}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -189,7 +191,7 @@ export function ImageGrid() {
   if (!currentDir) {
     return (
       <main className="flex flex-1 items-center justify-center bg-zinc-900 text-zinc-500">
-        <p>请先打开一个文件夹</p>
+        <p>{t('grid.openFolderFirst')}</p>
       </main>
     );
   }
@@ -198,10 +200,10 @@ export function ImageGrid() {
     <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-900">
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-zinc-700 px-3">
         <span className="text-sm text-zinc-400">
-          共 {totalImageCount ?? imagePaths.length} 张{totalImageCount == null && hasMore ? '+' : ''}
+          {totalImageCount == null && hasMore ? t('grid.countMore', { n: imagePaths.length }) : t('grid.count', { n: totalImageCount ?? imagePaths.length })}
         </span>
         <div className="flex items-center gap-2">
-          {loading && <span className="text-xs text-zinc-500">加载中…</span>}
+          {loading && <span className="text-xs text-zinc-500">{t('grid.loading')}</span>}
           <button
             type="button"
             onClick={handleRefresh}
@@ -210,10 +212,10 @@ export function ImageGrid() {
               'flex items-center gap-1.5 rounded px-2 py-1 text-xs text-zinc-400 transition-colors',
               'hover:bg-zinc-700/80 hover:text-zinc-200 disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-zinc-400'
             )}
-            title="刷新列表"
+            title={t('grid.refreshTitle')}
           >
             <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
-            刷新
+            {t('grid.refresh')}
           </button>
         </div>
       </div>
@@ -250,11 +252,11 @@ export function ImageGrid() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="delete-confirm-title" className="text-sm font-medium text-zinc-200 border-b border-zinc-700 p-4">
-              删除图片
+              {t('grid.deleteImage')}
             </h2>
             <section className="p-4">
               <p className="mt-2 text-sm text-zinc-400">
-                确定要删除该图片吗？此操作不可恢复。
+                {t('grid.deleteConfirm')}
               </p>
               <p className="mt-1 truncate text-xs text-zinc-500" title={pathToDelete}>
                 {pathToDelete.replace(/^.*[/\\]/, '')}
@@ -266,7 +268,7 @@ export function ImageGrid() {
                   disabled={deleting}
                   className="rounded px-3 py-1.5 text-sm text-zinc-400 cursor-pointer hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-50"
                 >
-                  取消
+                  {t('grid.cancel')}
                 </button>
                 <button
                   type="button"
@@ -274,7 +276,7 @@ export function ImageGrid() {
                   disabled={deleting}
                   className="rounded px-3 py-1.5 text-sm bg-red-600 text-white cursor-pointer hover:bg-red-500 disabled:opacity-50"
                 >
-                  {deleting ? '删除中…' : '确定删除'}
+                  {deleting ? t('grid.deleting') : t('grid.confirmDelete')}
                 </button>
               </div>
             </section>
