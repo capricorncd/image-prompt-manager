@@ -208,7 +208,7 @@ export function ImageGrid() {
             onClick={handleRefresh}
             disabled={loading}
             className={cn(
-              'flex items-center gap-1.5 rounded px-2 py-1 text-xs text-zinc-400 transition-colors',
+              'flex items-center gap-1.5 rounded px-2 py-1 text-xs text-zinc-400 transition-colors cursor-pointer',
               'hover:bg-zinc-700/80 hover:text-zinc-200 disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-zinc-400'
             )}
             title={t('grid.refreshTitle')}
@@ -257,7 +257,7 @@ export function ImageGrid() {
               <p className="mt-2 text-sm text-zinc-400">
                 {t('grid.deleteConfirm')}
               </p>
-              <p className="mt-1 truncate text-xs text-zinc-500" title={pathToDelete}>
+              <p className="mt-1 text-xs text-zinc-500" title={pathToDelete}>
                 {pathToDelete.replace(/^.*[/\\]/, '')}
               </p>
               <div className="mt-4 flex justify-end gap-2">
