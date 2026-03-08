@@ -86,10 +86,11 @@ const WRITE_OVERWRITE_ARGS = ['-overwrite_original'];
  */
 export async function writeImageInfo(filePath: string, meta: SDImageMetadata): Promise<void> {
   const value = getValueToWrite(meta);
-  // TODO: Parameters无法写入
   const tags: Record<string, string> = { [PNG_PARAMETERS_TAG]: value };
   if (meta.userComment) tags[EXIF_USER_COMMENT_TAG] = meta.userComment;
-  await exiftool.write(filePath, tags, WRITE_OVERWRITE_ARGS);
+  await exiftool.write(filePath, tags, {
+    writeArgs: WRITE_OVERWRITE_ARGS,
+  });
 }
 
 /**

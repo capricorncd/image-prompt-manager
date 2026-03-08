@@ -4,8 +4,6 @@
 
 查看 AI 生成图片的元数据（如 Stable Diffusion 的 prompt、负向提示词、种子、模型等）。
 
-> Windows测试只能修改UserComment, SD的Praramaters修改后无法保存图片。
-
 ![Image Prompt Manager](docs/logo.png)
 
 ![Image Prompt Manager](docs/screenshot.png)

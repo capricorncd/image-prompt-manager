@@ -19,6 +19,9 @@
     "apps/*"
   ],
   "license": "MIT",
+  "devDependencies": {
+    "electron": "40.2.1"
+  },
   "engines": {
     "node": ">=24.0.0"
   },

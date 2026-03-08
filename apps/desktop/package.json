@@ -14,7 +14,7 @@
     "chokidar": "^4.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "exiftool-vendored": "^24.6.0",
+    "exiftool-vendored": "^35.13.1",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -70,7 +70,10 @@
       }
     ],
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "signAndEditExecutable": false
     }
   }
