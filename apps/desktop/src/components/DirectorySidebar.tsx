@@ -53,23 +53,30 @@ export function DirectorySidebar() {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
-    const file = e.dataTransfer.files[0];
-    // 在 contextIsolation 下必须通过 preload 的 webUtils.getPathForFile 获取路径，File.path 已废弃且可能为空
-    const droppedPath =
-      file && typeof window.electronAPI.getPathForDroppedFile === 'function'
-        ? window.electronAPI.getPathForDroppedFile(file)
-        : '';
-    if (!droppedPath) return;
+    const files = e.dataTransfer.files;
+    if (!files?.length || typeof window.electronAPI.getPathForDroppedFile !== 'function') return;
+    // 在 contextIsolation 下必须通过 preload 的 webUtils.getPathForFile 获取路径
+    const paths: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const path = window.electronAPI.getPathForDroppedFile(files[i]);
+      if (path) paths.push(path);
+    }
+    if (paths.length === 0) return;
     setLoading(true);
     setError(null);
-    const dir = await window.electronAPI.addDirectoryByPath(droppedPath);
-    if (dir) {
+    const added: string[] = [];
+    for (const p of paths) {
+      const dir = await window.electronAPI.addDirectoryByPath(p);
+      if (dir) {
+        addDirectory(dir);
+        added.push(dir);
+      }
+    }
+    if (added.length > 0) {
       clearImages();
-      addDirectory(dir);
-      // 先置空再设回，确保 ImageGrid 的 useEffect(currentDir) 会触发并执行 loadPage(0)
       setCurrentDir(null);
       queueMicrotask(() => {
-        setCurrentDir(dir);
+        setCurrentDir(added[0]);
         setLoading(false);
       });
     } else {
