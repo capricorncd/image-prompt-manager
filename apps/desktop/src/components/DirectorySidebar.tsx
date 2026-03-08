@@ -1,15 +1,21 @@
-import { useState } from 'react';
-import { FolderOpen, Folder, Trash2 } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
+import { FolderOpen, Folder, Trash2, GripVertical } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import { cn } from '../lib/cn';
 import { t } from '../i18n';
 
+const REORDER_TYPE = 'application/x-directory-list-item';
+
 export function DirectorySidebar() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [draggingDir, setDraggingDir] = useState<string | null>(null);
+  const [dropTargetDir, setDropTargetDir] = useState<string | null>(null);
+  const draggedDirRef = useRef<string | null>(null);
   const directoryList = useAppStore((s) => s.directoryList);
   const currentDir = useAppStore((s) => s.currentDir);
   const addDirectory = useAppStore((s) => s.addDirectory);
   const removeDirectory = useAppStore((s) => s.removeDirectory);
+  const setDirectoryListOrder = useAppStore((s) => s.setDirectoryListOrder);
   const setCurrentDir = useAppStore((s) => s.setCurrentDir);
   useAppStore((s) => s.locale);
   const resetOnDirChange = useAppStore((s) => s.resetOnDirChange);
@@ -40,8 +46,9 @@ export function DirectorySidebar() {
   };
 
   const handleDragOver = (e: React.DragEvent) => {
+    // 内部列表排序拖拽：不接管，让列表行自己成为 drop 目标
+    if (e.dataTransfer.types.includes(REORDER_TYPE)) return;
     e.preventDefault();
-    // 使用 copy 以允许放下；系统会显示「复制」，栏内用「松开以添加文件夹」表达真实含义
     e.dataTransfer.dropEffect = 'copy';
     setIsDraggingOver(true);
   };
@@ -50,9 +57,59 @@ export function DirectorySidebar() {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDraggingOver(false);
   };
 
+  const handleRowDragStart = useCallback(
+    (e: React.DragEvent, dir: string) => {
+      e.dataTransfer.setData(REORDER_TYPE, dir);
+      e.dataTransfer.effectAllowed = 'move';
+      draggedDirRef.current = dir;
+      setDraggingDir(dir);
+    },
+    []
+  );
+
+  const handleRowDragEnd = useCallback(() => {
+    draggedDirRef.current = null;
+    setDraggingDir(null);
+    setDropTargetDir(null);
+  }, []);
+
+  const handleRowDragOver = useCallback((e: React.DragEvent, _dir: string) => {
+    if (!e.dataTransfer.types.includes(REORDER_TYPE)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetDir(_dir);
+  }, []);
+
+  const handleRowDragLeave = useCallback(() => {
+    setDropTargetDir(null);
+  }, []);
+
+  const handleRowDrop = useCallback(
+    (e: React.DragEvent, toDir: string) => {
+      if (!e.dataTransfer.types.includes(REORDER_TYPE)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setDropTargetDir(null);
+      setDraggingDir(null);
+      const fromDir = draggedDirRef.current ?? e.dataTransfer.getData(REORDER_TYPE);
+      draggedDirRef.current = null;
+      if (!fromDir || fromDir === toDir) return;
+      const list = [...directoryList];
+      const fromIdx = list.indexOf(fromDir);
+      const toIdx = list.indexOf(toDir);
+      if (fromIdx === -1 || toIdx === -1) return;
+      list.splice(fromIdx, 1);
+      const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
+      list.splice(insertIdx, 0, fromDir);
+      setDirectoryListOrder(list);
+    },
+    [directoryList, setDirectoryListOrder]
+  );
+
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
+    if (e.dataTransfer.types.includes(REORDER_TYPE)) return;
     const files = e.dataTransfer.files;
     if (!files?.length || typeof window.electronAPI.getPathForDroppedFile !== 'function') return;
     // 在 contextIsolation 下必须通过 preload 的 webUtils.getPathForFile 获取路径
@@ -112,21 +169,32 @@ export function DirectorySidebar() {
         {directoryList.map((dir) => {
           const name = dir.replace(/^.*[/\\]/, '') || dir;
           const isActive = currentDir === dir;
+          const isDragging = draggingDir === dir;
+          const isDropTarget = dropTargetDir === dir;
           return (
             <div
               key={dir}
               role="button"
               tabIndex={0}
+              draggable
+              onDragStart={(e) => handleRowDragStart(e, dir)}
+              onDragEnd={handleRowDragEnd}
+              onDragOver={(e) => handleRowDragOver(e, dir)}
+              onDragLeave={handleRowDragLeave}
+              onDrop={(e) => handleRowDrop(e, dir)}
               onClick={() => handleSelectDir(dir)}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleSelectDir(dir)}
               className={cn(
-                'flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm',
+                'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm',
                 isActive
                   ? 'bg-zinc-700 text-white'
-                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200',
+                isDragging && 'opacity-50',
+                isDropTarget && 'ring-1 ring-emerald-500/60 ring-inset'
               )}
               title={dir}
             >
+              <GripVertical className="h-4 w-4 shrink-0 text-zinc-500 cursor-grab active:cursor-grabbing" aria-hidden />
               <Folder className="h-4 w-4 shrink-0" />
               <span className="min-w-0 flex-1 truncate">{name}</span>
               <button

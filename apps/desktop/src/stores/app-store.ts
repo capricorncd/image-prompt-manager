@@ -48,6 +48,8 @@ interface AppState {
   error: string | null;
   addDirectory: (dir: string) => void;
   removeDirectory: (dir: string) => void;
+  /** 拖拽排序：用新的顺序覆盖目录列表（会持久化） */
+  setDirectoryListOrder: (ordered: string[]) => void;
   setCurrentDir: (dir: string | null) => void;
   appendImages: (paths: string[], hasMore: boolean, total?: number) => void;
   clearImages: () => void;
@@ -114,6 +116,8 @@ export const useAppStore = create<AppState>((set) => ({
         editedMetadata: null,
       };
     }),
+
+  setDirectoryListOrder: (ordered) => set({ directoryList: ordered }),
 
   setCurrentDir: (dir) =>
     set({ currentDir: dir, imagePaths: [], hasMore: false, totalImageCount: null, selectedPath: null, metadata: null, editedMetadata: null }),
