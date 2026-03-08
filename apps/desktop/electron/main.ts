@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeImage, shell, protocol, net } from 'electron';
+import { app, BrowserWindow, nativeImage, shell, protocol, net, session } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -80,7 +80,30 @@ function registerLocalImageProtocol(): void {
   });
 }
 
+/** 设置 Content-Security-Policy，消除 unsafe-eval 安全警告（开发与打包均生效） */
+function setContentSecurityPolicy(): void {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: local:",
+    "connect-src 'self' ws: wss: https:",
+    "frame-ancestors 'none'",
+  ].join('; ');
+  const ses = session.defaultSession;
+  ses.webRequest.onHeadersReceived((details, callback) => {
+    if (details.resourceType === 'mainFrame') {
+      const headers = { ...details.responseHeaders };
+      headers['Content-Security-Policy'] = [csp];
+      callback({ responseHeaders: headers });
+    } else {
+      callback({ responseHeaders: details.responseHeaders });
+    }
+  });
+}
+
 app.whenReady().then(() => {
+  setContentSecurityPolicy();
   registerLocalImageProtocol();
   registerIpcHandlers();
   createWindow();
