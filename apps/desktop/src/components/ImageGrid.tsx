@@ -29,7 +29,6 @@ export function ImageGrid() {
   const selectImage = useAppStore((s) => s.selectImage);
   const setRawMetadata = useAppStore((s) => s.setRawMetadata);
   const removeImagePath = useAppStore((s) => s.removeImagePath);
-  const locale = useAppStore((s) => s.locale);
   const gridRef = useRef<Grid>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 560 });
