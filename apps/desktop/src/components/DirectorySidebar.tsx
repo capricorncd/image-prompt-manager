@@ -98,7 +98,17 @@ export function DirectorySidebar() {
     } finally {
       setLoading(false);
     }
-  }, [editingDir, editName, replaceDirectoryPath, currentDir, clearImages, setCurrentDir, setLoading, setError, handleCancelRename]);
+  }, [
+    editingDir,
+    editName,
+    replaceDirectoryPath,
+    currentDir,
+    clearImages,
+    setCurrentDir,
+    setLoading,
+    setError,
+    handleCancelRename,
+  ]);
 
   const handleDragOver = (e: React.DragEvent) => {
     // 内部列表排序拖拽：不接管，让列表行自己成为 drop 目标
@@ -112,15 +122,12 @@ export function DirectorySidebar() {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDraggingOver(false);
   };
 
-  const handleRowDragStart = useCallback(
-    (e: React.DragEvent, dir: string) => {
-      e.dataTransfer.setData(REORDER_TYPE, dir);
-      e.dataTransfer.effectAllowed = 'move';
-      draggedDirRef.current = dir;
-      setDraggingDir(dir);
-    },
-    []
-  );
+  const handleRowDragStart = useCallback((e: React.DragEvent, dir: string) => {
+    e.dataTransfer.setData(REORDER_TYPE, dir);
+    e.dataTransfer.effectAllowed = 'move';
+    draggedDirRef.current = dir;
+    setDraggingDir(dir);
+  }, []);
 
   const handleRowDragEnd = useCallback(() => {
     draggedDirRef.current = null;
@@ -200,7 +207,7 @@ export function DirectorySidebar() {
     <aside
       className={cn(
         'flex w-60 shrink-0 flex-col border-r border-zinc-700 bg-zinc-900/80 transition-colors',
-        isDraggingOver && 'bg-emerald-900/30 ring-1 ring-inset ring-emerald-500/50'
+        isDraggingOver && 'bg-emerald-900/30 ring-1 ring-emerald-500/50 ring-inset'
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -208,7 +215,10 @@ export function DirectorySidebar() {
     >
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-700 p-3">
         <FolderOpen className="h-5 w-5 shrink-0 text-zinc-400" />
-        <span className="min-w-0 text-sm font-medium text-zinc-300" title={isDraggingOver ? t('sidebar.dropHintFull') : undefined}>
+        <span
+          className="min-w-0 text-sm font-medium text-zinc-300"
+          title={isDraggingOver ? t('sidebar.dropHintFull') : undefined}
+        >
           {isDraggingOver ? t('sidebar.dropHint') : t('sidebar.folders')}
         </span>
       </div>
@@ -216,7 +226,7 @@ export function DirectorySidebar() {
         <button
           type="button"
           onClick={handleOpenFolder}
-          className="flex w-full items-center gap-2 rounded-lg bg-emerald-600/80 px-3 py-2 text-left text-sm font-medium text-white hover:bg-emerald-600 cursor-pointer"
+          className="flex w-full cursor-pointer items-center gap-2 rounded-lg bg-emerald-600/80 px-3 py-2 text-left text-sm font-medium text-white hover:bg-emerald-600"
         >
           <FolderOpen className="h-4 w-4 shrink-0" />
           {t('sidebar.openFolder')}
@@ -243,15 +253,16 @@ export function DirectorySidebar() {
               onDoubleClick={() => handleStartRename(dir)}
               className={cn(
                 'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm',
-                isActive
-                  ? 'bg-zinc-700 text-white'
-                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200',
+                isActive ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200',
                 isDragging && 'opacity-50',
                 isDropTarget && 'ring-1 ring-emerald-500/60 ring-inset'
               )}
               title={dir}
             >
-              <GripVertical className="h-4 w-4 shrink-0 text-zinc-500 cursor-grab active:cursor-grabbing" aria-hidden />
+              <GripVertical
+                className="h-4 w-4 shrink-0 cursor-grab text-zinc-500 active:cursor-grabbing"
+                aria-hidden
+              />
               <Folder className="h-4 w-4 shrink-0" />
               {isEditing ? (
                 <input
@@ -269,7 +280,7 @@ export function DirectorySidebar() {
                     }
                   }}
                   onBlur={handleCancelRename}
-                  className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-800/80 px-2 py-1 text-sm text-zinc-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                  className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-800/80 px-2 py-1 text-sm text-zinc-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 focus:outline-none"
                 />
               ) : (
                 <span className="min-w-0 flex-1 truncate">{name}</span>

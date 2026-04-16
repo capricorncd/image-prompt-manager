@@ -1,0 +1,11 @@
+node_modules
+release
+dist
+dist-electron
+.cursor
+
+*.log
+*.lock
+
+*.md
+

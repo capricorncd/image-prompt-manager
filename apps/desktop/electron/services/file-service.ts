@@ -25,9 +25,7 @@ export async function listDirectories(dirPath: string): Promise<string[]> {
  * 分页列出目录中的图片文件路径（相对或绝对由调用方决定）。
  * 不一次性读入全部到内存后只取一页：先 readdir 再过滤再 slice，避免大目录时前端卡死。
  */
-export async function listImageFiles(
-  dirPath: string,
-): Promise<{ entries: string[]; total: number }> {
+export async function listImageFiles(dirPath: string): Promise<{ entries: string[]; total: number }> {
   const names = await fs.promises.readdir(dirPath, { withFileTypes: true });
   const files = names
     .filter((d) => d.isFile() && isImageFile(d.name))

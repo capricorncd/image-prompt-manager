@@ -62,13 +62,13 @@ export function LargeImageModal(props: Props): ReactNode | null {
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 cursor-pointer"
+            className="shrink-0 cursor-pointer rounded p-1 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
             aria-label={t('meta.close')}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto p-4 flex items-center justify-center">
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
           <img
             src={`local://image?path=${encodeURIComponent(path)}`}
             alt=""
@@ -86,4 +86,3 @@ export function LargeImageModal(props: Props): ReactNode | null {
     </div>
   );
 }
-

@@ -38,21 +38,16 @@ export function ImageGrid() {
   const [largeImageIndex, setLargeImageIndex] = useState<number>(0);
   const [showLargeImageModal, setShowLargeImageModal] = useState(false);
 
-  const loadPage = useCallback(
-    async () => {
-      if (!currentDir || !window.electronAPI?.listImages) return;
-      setLoading(true);
-      try {
-        const { entries, total } = await window.electronAPI.listImages(
-          currentDir,
-        );
-        setImagePaths(entries, total);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [currentDir, setImagePaths, setLoading]
-  );
+  const loadPage = useCallback(async () => {
+    if (!currentDir || !window.electronAPI?.listImages) return;
+    setLoading(true);
+    try {
+      const { entries, total } = await window.electronAPI.listImages(currentDir);
+      setImagePaths(entries, total);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentDir, setImagePaths, setLoading]);
 
   useEffect(() => {
     if (!currentDir) return;
@@ -161,11 +156,13 @@ export function ImageGrid() {
               }
             }}
             className={cn(
-              'flex flex-1 flex-col overflow-hidden rounded-lg border-2 bg-zinc-800/80 transition-colors cursor-pointer',
-              isSelected ? 'border-emerald-500 ring-1 ring-emerald-500/50' : 'border-transparent hover:border-zinc-600'
+              'flex flex-1 cursor-pointer flex-col overflow-hidden rounded-lg border-2 bg-zinc-800/80 transition-colors',
+              isSelected
+                ? 'border-emerald-500 ring-1 ring-emerald-500/50'
+                : 'border-transparent hover:border-zinc-600'
             )}
           >
-            <div className="relative flex aspect-square items-center justify-center overflow-hidden p-1 group">
+            <div className="group relative flex aspect-square items-center justify-center overflow-hidden p-1">
               <img
                 src={`local://image?path=${encodeURIComponent(path)}`}
                 alt=""
@@ -177,9 +174,9 @@ export function ImageGrid() {
                 type="button"
                 onClick={(e) => handleViewLargeClick(e, path)}
                 className={cn(
-                  'absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded bg-zinc-800/90 text-zinc-400',
+                  'absolute top-1 left-1 flex h-6 w-6 items-center justify-center rounded bg-zinc-800/90 text-zinc-400',
                   'opacity-0 transition-opacity group-hover:opacity-100',
-                  'hover:bg-zinc-700 hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500'
+                  'hover:bg-zinc-700 hover:text-zinc-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none'
                 )}
                 title={t('meta.viewLarge')}
                 aria-label={t('meta.viewLarge')}
@@ -189,7 +186,7 @@ export function ImageGrid() {
               <button
                 type="button"
                 onClick={(e) => handleDeleteClick(e, path)}
-                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded bg-zinc-800/90 text-zinc-400 hover:bg-red-600/90 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded bg-zinc-800/90 text-zinc-400 hover:bg-red-600/90 hover:text-white focus:ring-2 focus:ring-red-500 focus:outline-none"
                 title={t('grid.deleteImage')}
                 aria-label={t('sidebar.remove')}
               >
@@ -218,7 +215,9 @@ export function ImageGrid() {
     <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-900">
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-zinc-700 px-3">
         <span className="text-sm text-zinc-400">
-          {totalImageCount == null && hasMore ? t('grid.countMore', { n: imagePaths.length }) : t('grid.count', { n: totalImageCount ?? imagePaths.length })}
+          {totalImageCount == null && hasMore
+            ? t('grid.countMore', { n: imagePaths.length })
+            : t('grid.count', { n: totalImageCount ?? imagePaths.length })}
         </span>
         <div className="flex items-center gap-2">
           {loading && <span className="text-xs text-zinc-500">{t('grid.loading')}</span>}
@@ -227,7 +226,7 @@ export function ImageGrid() {
             onClick={handleRefresh}
             disabled={loading}
             className={cn(
-              'flex items-center gap-1.5 rounded px-2 py-1 text-xs text-zinc-400 transition-colors cursor-pointer',
+              'flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs text-zinc-400 transition-colors',
               'hover:bg-zinc-700/80 hover:text-zinc-200 disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-zinc-400'
             )}
             title={t('grid.refreshTitle')}
@@ -260,12 +259,8 @@ export function ImageGrid() {
         currentIndex={largeImageIndex != null ? largeImageIndex : undefined}
         total={totalImageCount ?? undefined}
         allowNavigation={true}
-        onPrev={
-          () => setLargeImageIndex((prev) => prev <= 0 ? imagePaths.length - 1 : prev - 1)
-        }
-        onNext={
-          () => setLargeImageIndex((prev) => (prev >= imagePaths.length - 1 ? 0 : prev + 1))
-        }
+        onPrev={() => setLargeImageIndex((prev) => (prev <= 0 ? imagePaths.length - 1 : prev - 1))}
+        onNext={() => setLargeImageIndex((prev) => (prev >= imagePaths.length - 1 ? 0 : prev + 1))}
       />
 
       {pathToDelete != null && (
@@ -280,13 +275,14 @@ export function ImageGrid() {
             className="w-full max-w-sm rounded-lg border border-zinc-600 bg-zinc-900 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="delete-confirm-title" className="text-sm font-medium text-zinc-200 border-b border-zinc-700 p-4">
+            <h2
+              id="delete-confirm-title"
+              className="border-b border-zinc-700 p-4 text-sm font-medium text-zinc-200"
+            >
               {t('grid.deleteImage')}
             </h2>
             <section className="p-4">
-              <p className="mt-2 text-sm text-zinc-400">
-                {t('grid.deleteConfirm')}
-              </p>
+              <p className="mt-2 text-sm text-zinc-400">{t('grid.deleteConfirm')}</p>
               <p className="mt-1 text-xs text-zinc-500" title={pathToDelete}>
                 {pathToDelete.replace(/^.*[/\\]/, '')}
               </p>
@@ -295,7 +291,7 @@ export function ImageGrid() {
                   type="button"
                   onClick={handleCancelDelete}
                   disabled={deleting}
-                  className="rounded px-3 py-1.5 text-sm text-zinc-400 cursor-pointer hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-50"
+                  className="cursor-pointer rounded px-3 py-1.5 text-sm text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-50"
                 >
                   {t('grid.cancel')}
                 </button>
@@ -303,7 +299,7 @@ export function ImageGrid() {
                   type="button"
                   onClick={handleConfirmDelete}
                   disabled={deleting}
-                  className="rounded px-3 py-1.5 text-sm bg-red-600 text-white cursor-pointer hover:bg-red-500 disabled:opacity-50"
+                  className="cursor-pointer rounded bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-500 disabled:opacity-50"
                 >
                   {deleting ? t('grid.deleting') : t('grid.confirmDelete')}
                 </button>

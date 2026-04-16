@@ -24,16 +24,19 @@ export const getEmptyParameters = (): SDImageMetadata => ({
 /**
  * 从图片文件读取 SD 元数据。
  * 优先使用 PNG tEXt 键 "parameters"，其次 EXIF UserComment。
-  */
+ */
 export async function readImageInfo(filePath: string): Promise<PNGMetadata> {
   try {
     const tags = (await exiftool.read(filePath)) as Record<string, unknown>;
     return {
       tags,
-      parameters: parseSDParameters(String(tags[PNG_PARAMETERS_TAG] ?? ''), String(tags[EXIF_USER_COMMENT_TAG] ?? ''))
+      parameters: parseSDParameters(
+        String(tags[PNG_PARAMETERS_TAG] ?? ''),
+        String(tags[EXIF_USER_COMMENT_TAG] ?? '')
+      ),
     };
   } catch {
-    return { tags: {}, parameters: getEmptyParameters()};
+    return { tags: {}, parameters: getEmptyParameters() };
   }
 }
 
@@ -86,9 +89,9 @@ const WRITE_OVERWRITE_ARGS = ['-overwrite_original'];
  */
 export async function writeImageInfo(filePath: string, meta: SDImageMetadata): Promise<void> {
   const value = getValueToWrite(meta);
-  const tags: Record<string, string> = { 
-    [PNG_PARAMETERS_TAG]: value, 
-    [EXIF_USER_COMMENT_TAG]: meta.userComment 
+  const tags: Record<string, string> = {
+    [PNG_PARAMETERS_TAG]: value,
+    [EXIF_USER_COMMENT_TAG]: meta.userComment,
   };
   await exiftool.write(filePath, tags, {
     writeArgs: WRITE_OVERWRITE_ARGS,

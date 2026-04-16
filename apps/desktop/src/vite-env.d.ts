@@ -11,12 +11,13 @@ declare global {
       /** 从拖放得到的 File 获取本地路径（preload 中 webUtils.getPathForFile） */
       getPathForDroppedFile(file: File): string;
       addDirectoryByPath(dirPath: string): Promise<string | null>;
-      listImages(
-        dirPath: string,
-      ): Promise<{ entries: string[]; total: number }>;
+      listImages(dirPath: string): Promise<{ entries: string[]; total: number }>;
       listDirs(dirPath: string): Promise<string[]>;
       removeDirectory(dirPath: string): Promise<void>;
-      renameDirectory(dirPath: string, newName: string): Promise<{ ok: boolean; newPath?: string; error?: string }>;
+      renameDirectory(
+        dirPath: string,
+        newName: string
+      ): Promise<{ ok: boolean; newPath?: string; error?: string }>;
       deleteFile(filePath: string): Promise<{ ok: boolean; error?: string }>;
       buildSavePath(originalPath: string, nameNoExt: string): Promise<string>;
       showSaveDialogWithSuggestedName(originalPath: string, nameNoExt: string): Promise<string | null>;
@@ -31,7 +32,9 @@ declare global {
         filePath: string,
         meta: SDImageMetadata
       ): Promise<{ ok: boolean; error?: string; meta?: PNGMetadata | null }>;
-      onDirChanged(callback: (payload: { event: 'add' | 'unlink' | 'change'; fullPath: string }) => void): () => void;
+      onDirChanged(
+        callback: (payload: { event: 'add' | 'unlink' | 'change'; fullPath: string }) => void
+      ): () => void;
       /** 订阅语言切换（File > Language 菜单） */
       onLocaleChange(callback: (locale: string) => void): () => void;
     };

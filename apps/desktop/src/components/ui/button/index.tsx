@@ -36,4 +36,3 @@ export function UiButton(props: UiButtonProps): JSX.Element {
     </button>
   );
 }
-

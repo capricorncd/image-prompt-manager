@@ -11,16 +11,15 @@ export function isPathUnderBase(resolvedPath: string, baseDir: string): boolean 
   if (process.platform === 'win32') {
     return normalized.toLowerCase().startsWith(base.toLowerCase()) && normalized.length >= base.length;
   }
-  return normalized.startsWith(base) && (normalized.length === base.length || normalized[base.length] === path.sep);
+  return (
+    normalized.startsWith(base) && (normalized.length === base.length || normalized[base.length] === path.sep)
+  );
 }
 
 /**
  * 解析并校验：path 必须在 baseDir 下，且存在。返回规范化的绝对路径或 null。
  */
-export function resolveAndValidatePath(
-  inputPath: string,
-  baseDir: string
-): string | null {
+export function resolveAndValidatePath(inputPath: string, baseDir: string): string | null {
   try {
     const resolved = path.resolve(inputPath);
     if (!isPathUnderBase(resolved, baseDir)) return null;

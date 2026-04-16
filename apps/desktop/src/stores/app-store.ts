@@ -136,7 +136,15 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   setCurrentDir: (dir) =>
-    set({ currentDir: dir, imagePaths: [], hasMore: false, totalImageCount: null, selectedPath: null, metadata: null, editedMetadata: null }),
+    set({
+      currentDir: dir,
+      imagePaths: [],
+      hasMore: false,
+      totalImageCount: null,
+      selectedPath: null,
+      metadata: null,
+      editedMetadata: null,
+    }),
 
   setImagePaths: (paths, total) =>
     set({
@@ -156,7 +164,14 @@ export const useAppStore = create<AppState>((set) => ({
   setError: (msg) => set({ error: msg }),
 
   resetOnDirChange: () =>
-    set({ imagePaths: [], hasMore: false, totalImageCount: null, selectedPath: null, metadata: null, editedMetadata: null }),
+    set({
+      imagePaths: [],
+      hasMore: false,
+      totalImageCount: null,
+      selectedPath: null,
+      metadata: null,
+      editedMetadata: null,
+    }),
 
   replaceImagePath: (originalPath, newPath) =>
     set((s) => {
@@ -191,8 +206,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   setRawMetadata: (tags) => set({ rawMetadata: tags }),
 
-  restoreDirectories: (dirs, currentDir) =>
-    set({ directoryList: dirs, currentDir }),
+  restoreDirectories: (dirs, currentDir) => set({ directoryList: dirs, currentDir }),
 }));
 
 const PERSIST_KEY = 'image-prompt-manager:directories';
@@ -234,4 +248,3 @@ useAppStore.subscribe((state) => {
     persistDirectories(payload);
   }
 });
-

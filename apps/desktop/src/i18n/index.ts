@@ -135,7 +135,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'meta.save': '保存',
     'meta.saveAs': '名前を付けて保存',
     'meta.selectImageFirst': '先に画像を選択してください',
-    'meta.saveDialogOpening': '保存ダイアログを開いています…（表示されない場合は Alt+Tab で切り替えてください）',
+    'meta.saveDialogOpening':
+      '保存ダイアログを開いています…（表示されない場合は Alt+Tab で切り替えてください）',
     'meta.saveAsUnsupported': 'この環境では名前を付けて保存はサポートされていません',
     'meta.cancelled': 'キャンセルしました',
     'meta.savedAs': '名前を付けて保存しました',

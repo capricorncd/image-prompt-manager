@@ -8,19 +8,9 @@ import {
   endExifTool,
   getEmptyParameters,
 } from './services/metadata-service.js';
-import {
-  listImageFiles,
-  listDirectories,
-  watchDirectory,
-  isPathUnderBase,
-} from './services/file-service.js';
+import { listImageFiles, listDirectories, watchDirectory, isPathUnderBase } from './services/file-service.js';
 import type { SDImageMetadata, PNGMetadata } from './types/metadata.js';
-import {
-  addOpenedRoot,
-  removeOpenedRoot,
-  getOpenedRoots,
-  validatePathUnderRoot,
-} from './shared-state.js';
+import { addOpenedRoot, removeOpenedRoot, getOpenedRoots, validatePathUnderRoot } from './shared-state.js';
 
 const unwatchFns = new Map<string, () => void>();
 
@@ -155,15 +145,12 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     'fs:listImages',
-    async (
-      _,
-      dirPath: string,
-    ): Promise<{ entries: string[]; total: number }> => {
+    async (_, dirPath: string): Promise<{ entries: string[]; total: number }> => {
       const resolved = path.resolve(dirPath);
       const roots = getOpenedRoots();
       const underAny = roots.some((root) => isPathUnderBase(resolved, root));
       if (!underAny) {
-        return { entries: [],  total: 0 };
+        return { entries: [], total: 0 };
       }
       return listImageFiles(resolved);
     }
@@ -195,17 +182,14 @@ export function registerIpcHandlers(): void {
   });
 
   /** 由主进程用 path.join 构建“默认保存路径”，保证平台路径正确 */
-  ipcMain.handle(
-    'path:buildSavePath',
-    (_, originalPath: string, nameNoExt: string): string => {
-      const resolved = path.resolve(originalPath);
-      if (!validateUnderRoot(resolved)) return '';
-      const dir = path.dirname(resolved);
-      const ext = path.extname(resolved) || '.png';
-      const base = (nameNoExt || path.basename(resolved, ext)).replace(/\.[^.]+$/, '');
-      return path.join(dir, base + ext);
-    }
-  );
+  ipcMain.handle('path:buildSavePath', (_, originalPath: string, nameNoExt: string): string => {
+    const resolved = path.resolve(originalPath);
+    if (!validateUnderRoot(resolved)) return '';
+    const dir = path.dirname(resolved);
+    const ext = path.extname(resolved) || '.png';
+    const base = (nameNoExt || path.basename(resolved, ext)).replace(/\.[^.]+$/, '');
+    return path.join(dir, base + ext);
+  });
 
   /** 在主进程内直接弹出另存为对话框并返回用户选择路径；不传 parent 避免部分系统下对话框被遮挡 */
   ipcMain.handle(
@@ -217,7 +201,9 @@ export function registerIpcHandlers(): void {
         if (!validateUnderRoot(resolved)) return null;
         const dir = path.dirname(resolved);
         const ext = path.extname(resolved) || '.png';
-        const base = (nameNoExt || path.basename(resolved, ext)).trim().replace(/\.[^.]+$/, '') || path.basename(resolved, ext);
+        const base =
+          (nameNoExt || path.basename(resolved, ext)).trim().replace(/\.[^.]+$/, '') ||
+          path.basename(resolved, ext);
         const defaultPath = path.join(dir, base + ext);
         const win = getMainWindow();
         if (win && !win.isDestroyed()) {
@@ -285,11 +271,7 @@ export function registerIpcHandlers(): void {
         return { ok: false, error: '目标路径不在当前工作目录内' };
       }
       try {
-        await saveImageWithMetadata(
-          path.resolve(originalPath),
-          meta,
-          targetResolved
-        );
+        await saveImageWithMetadata(path.resolve(originalPath), meta, targetResolved);
         return { ok: true };
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : String(e) };

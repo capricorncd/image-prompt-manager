@@ -42,8 +42,15 @@ const electronAPI = {
     return ipcRenderer.invoke('fs:removeDirectory', dirPath) as Promise<void>;
   },
   /** 重命名目录（同级改名），返回新路径 */
-  renameDirectory(dirPath: string, newName: string): Promise<{ ok: boolean; newPath?: string; error?: string }> {
-    return ipcRenderer.invoke('fs:renameDir', dirPath, newName) as Promise<{ ok: boolean; newPath?: string; error?: string }>;
+  renameDirectory(
+    dirPath: string,
+    newName: string
+  ): Promise<{ ok: boolean; newPath?: string; error?: string }> {
+    return ipcRenderer.invoke('fs:renameDir', dirPath, newName) as Promise<{
+      ok: boolean;
+      newPath?: string;
+      error?: string;
+    }>;
   },
   /** 删除文件（仅限当前工作目录内） */
   deleteFile(filePath: string): Promise<{ ok: boolean; error?: string }> {
@@ -55,7 +62,9 @@ const electronAPI = {
   },
   /** 在主进程内直接弹出另存为对话框（带建议文件名），返回用户选择路径；取消或出错返回 null */
   showSaveDialogWithSuggestedName(originalPath: string, nameNoExt: string): Promise<string | null> {
-    return ipcRenderer.invoke('dialog:saveFileWithSuggestedName', originalPath, nameNoExt) as Promise<string | null>;
+    return ipcRenderer.invoke('dialog:saveFileWithSuggestedName', originalPath, nameNoExt) as Promise<
+      string | null
+    >;
   },
   /** 另存为对话框，返回用户选择的目标路径 */
   showSaveDialog(defaultPath: string): Promise<string | null> {
@@ -63,7 +72,9 @@ const electronAPI = {
   },
   /** 读取图片 SD 元数据（优先 PNG parameters，其次 EXIF UserComment） */
   readImageMetadata(filePath: string): Promise<import('./types/metadata.js').PNGMetadata | null> {
-    return ipcRenderer.invoke('metadata:read', filePath) as Promise<import('./types/metadata.js').PNGMetadata | null>;
+    return ipcRenderer.invoke('metadata:read', filePath) as Promise<
+      import('./types/metadata.js').PNGMetadata | null
+    >;
   },
   /** 另存为：复制到新路径并写入元数据，不覆盖原图 */
   saveImageWithMetadata(
@@ -81,7 +92,11 @@ const electronAPI = {
     filePath: string,
     meta: import('./types/metadata.js').SDImageMetadata
   ): Promise<{ ok: boolean; error?: string }> {
-    return ipcRenderer.invoke('metadata:write', filePath, meta) as Promise<{ ok: boolean; error?: string; meta?: import('./types/metadata.js').PNGMetadata | null }>;
+    return ipcRenderer.invoke('metadata:write', filePath, meta) as Promise<{
+      ok: boolean;
+      error?: string;
+      meta?: import('./types/metadata.js').PNGMetadata | null;
+    }>;
   },
   /** 订阅当前打开目录的文件变更（chokidar 推送，非轮询） */
   onDirChanged(callback: (payload: DirChangedPayload) => void): () => void {

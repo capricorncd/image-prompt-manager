@@ -13,7 +13,11 @@ const FIELD_REGEXES: Array<{
   { key: 'sampler', pattern: /Sampler:\s*([^,]+?)(?=\s*,\s*\w+:|$)/i, transform: (m) => m[1]!.trim() },
   { key: 'cfgScale', pattern: /CFG\s*scale:\s*([\d.]+)/i, transform: (m) => parseFloat(m[1]!) },
   { key: 'seed', pattern: /Seed:\s*(\d+)/i, transform: (m) => parseInt(m[1]!, 10) },
-  { key: 'size', pattern: /Size:\s*(\d+\s*x\s*\d+|\d+\s*×\s*\d+)/i, transform: (m) => m[1]!.replace(/\s/g, '') },
+  {
+    key: 'size',
+    pattern: /Size:\s*(\d+\s*x\s*\d+|\d+\s*×\s*\d+)/i,
+    transform: (m) => m[1]!.replace(/\s/g, ''),
+  },
   { key: 'modelHash', pattern: /Model\s*hash:\s*([^,]+?)(?=\s*,\s*\w+:|$)/i, transform: (m) => m[1]!.trim() },
   { key: 'model', pattern: /Model:\s*([^,]+?)(?=\s*,\s*\w+:|$)/i, transform: (m) => m[1]!.trim() },
 ];
@@ -52,12 +56,7 @@ export function parseSDParameters(raw: string, userComment: string): SDImageMeta
   if (normalized.startsWith('{')) {
     try {
       const obj = JSON.parse(normalized) as Record<string, unknown>;
-      if (
-        obj &&
-        typeof obj === 'object' &&
-        !Array.isArray(obj) &&
-        typeof obj['prompt'] === 'string'
-      ) {
+      if (obj && typeof obj === 'object' && !Array.isArray(obj) && typeof obj['prompt'] === 'string') {
         prompt = obj['prompt'];
       }
     } catch {
