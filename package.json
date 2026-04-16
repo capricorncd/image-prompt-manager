@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "npm run dev -w apps/desktop",
-    "build": "npm run build -w apps/desktop",
+    "package": "npm run build -w apps/desktop",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
