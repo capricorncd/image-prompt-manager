@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { t } from '../i18n';
+import type { JSX } from 'react';
 
 export function LargeImageModal(props: {
   open: boolean;
