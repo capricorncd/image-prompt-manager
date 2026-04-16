@@ -18,10 +18,9 @@ interface Props {
 
 export function LargeImageModal(props: Props): ReactNode | null {
   const { open, path, onClose, title, allowNavigation, currentIndex, total, onPrev, onNext } = props;
-  if (!open || !path) return null;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !path) return;
     const handler = (e: KeyboardEvent): void => {
       if (!allowNavigation) return;
       if (e.key === 'ArrowLeft') {
@@ -42,6 +41,9 @@ export function LargeImageModal(props: Props): ReactNode | null {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [open, allowNavigation, onPrev, onNext, onClose]);
+
+  // 注意：必须在 hooks 之后再 return，避免条件性 hooks 导致监听器无法清理
+  if (!open || !path) return null;
 
   return (
     <div
