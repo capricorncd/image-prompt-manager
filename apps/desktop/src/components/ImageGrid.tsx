@@ -35,7 +35,7 @@ export function ImageGrid() {
   const [size, setSize] = useState({ width: 800, height: 560 });
   const [pathToDelete, setPathToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [largeImagePath, setLargeImagePath] = useState<string | null>(null);
+  const [largeImageIndex, setLargeImageIndex] = useState<number | null>(null);
 
   const loadPage = useCallback(
     async (offset: number) => {
@@ -99,10 +99,24 @@ export function ImageGrid() {
     setPathToDelete(path);
   }, []);
 
-  const handleViewLargeClick = useCallback((e: React.MouseEvent, path: string) => {
-    e.stopPropagation();
-    setLargeImagePath(path);
-  }, []);
+  const handleViewLargeClick = useCallback(
+    (e: React.MouseEvent, path: string) => {
+      e.stopPropagation();
+      const idx = imagePaths.indexOf(path);
+      if (idx >= 0) setLargeImageIndex(idx);
+    },
+    [imagePaths]
+  );
+
+  // 若列表变化导致当前索引越界，则关闭大图或回退到最后一张
+  useEffect(() => {
+    if (largeImageIndex == null) return;
+    if (imagePaths.length === 0) {
+      setLargeImageIndex(null);
+    } else if (largeImageIndex >= imagePaths.length) {
+      setLargeImageIndex(imagePaths.length - 1);
+    }
+  }, [largeImageIndex, imagePaths.length]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!pathToDelete || !window.electronAPI?.deleteFile) return;
@@ -270,7 +284,23 @@ export function ImageGrid() {
         </Grid>
       </div>
 
-      <LargeImageModal open={largeImagePath != null} path={largeImagePath} onClose={() => setLargeImagePath(null)} />
+      <LargeImageModal
+        open={largeImageIndex != null && imagePaths.length > 0}
+        path={largeImageIndex != null ? imagePaths[largeImageIndex] : null}
+        onClose={() => setLargeImageIndex(null)}
+        currentIndex={largeImageIndex != null ? largeImageIndex : undefined}
+        total={imagePaths.length || undefined}
+        onPrev={
+          imagePaths.length > 0 && largeImageIndex != null
+            ? () => setLargeImageIndex((prev) => (prev == null ? 0 : (prev - 1 + imagePaths.length) % imagePaths.length))
+            : undefined
+        }
+        onNext={
+          imagePaths.length > 0 && largeImageIndex != null
+            ? () => setLargeImageIndex((prev) => (prev == null ? 0 : (prev + 1) % imagePaths.length))
+            : undefined
+        }
+      />
 
       {pathToDelete != null && (
         <div
