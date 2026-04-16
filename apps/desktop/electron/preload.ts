@@ -43,6 +43,10 @@ const electronAPI = {
   removeDirectory(dirPath: string): Promise<void> {
     return ipcRenderer.invoke('fs:removeDirectory', dirPath) as Promise<void>;
   },
+  /** 重命名目录（同级改名），返回新路径 */
+  renameDirectory(dirPath: string, newName: string): Promise<{ ok: boolean; newPath?: string; error?: string }> {
+    return ipcRenderer.invoke('fs:renameDir', dirPath, newName) as Promise<{ ok: boolean; newPath?: string; error?: string }>;
+  },
   /** 删除文件（仅限当前工作目录内） */
   deleteFile(filePath: string): Promise<{ ok: boolean; error?: string }> {
     return ipcRenderer.invoke('fs:deleteFile', filePath) as Promise<{ ok: boolean; error?: string }>;

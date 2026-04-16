@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { FolderOpen, Folder, Trash2, GripVertical } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import { cn } from '../lib/cn';
 import { t } from '../i18n';
+import { UiButton } from './ui';
 
 const REORDER_TYPE = 'application/x-directory-list-item';
 
@@ -11,17 +12,27 @@ export function DirectorySidebar() {
   const [draggingDir, setDraggingDir] = useState<string | null>(null);
   const [dropTargetDir, setDropTargetDir] = useState<string | null>(null);
   const draggedDirRef = useRef<string | null>(null);
+  const [editingDir, setEditingDir] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const editInputRef = useRef<HTMLInputElement | null>(null);
   const directoryList = useAppStore((s) => s.directoryList);
   const currentDir = useAppStore((s) => s.currentDir);
   const addDirectory = useAppStore((s) => s.addDirectory);
   const removeDirectory = useAppStore((s) => s.removeDirectory);
   const setDirectoryListOrder = useAppStore((s) => s.setDirectoryListOrder);
+  const replaceDirectoryPath = useAppStore((s) => s.replaceDirectoryPath);
   const setCurrentDir = useAppStore((s) => s.setCurrentDir);
   useAppStore((s) => s.locale);
   const resetOnDirChange = useAppStore((s) => s.resetOnDirChange);
   const clearImages = useAppStore((s) => s.clearImages);
   const setLoading = useAppStore((s) => s.setLoading);
   const setError = useAppStore((s) => s.setError);
+
+  useEffect(() => {
+    if (editingDir) {
+      queueMicrotask(() => editInputRef.current?.focus());
+    }
+  }, [editingDir]);
 
   const handleOpenFolder = async () => {
     const dir = await window.electronAPI.openDirectory();
@@ -44,6 +55,50 @@ export function DirectorySidebar() {
     await window.electronAPI.removeDirectory(dir);
     removeDirectory(dir);
   };
+
+  const handleStartRename = useCallback((dir: string) => {
+    const base = dir.replace(/^.*[/\\]/, '') || dir;
+    setEditingDir(dir);
+    setEditName(base);
+  }, []);
+
+  const handleCancelRename = useCallback(() => {
+    setEditingDir(null);
+    setEditName('');
+  }, []);
+
+  const handleCommitRename = useCallback(async () => {
+    if (!editingDir) return;
+    const newName = editName.trim();
+    if (!newName) {
+      handleCancelRename();
+      return;
+    }
+    if (!window.electronAPI?.renameDirectory) {
+      handleCancelRename();
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await window.electronAPI.renameDirectory(editingDir, newName);
+      if (res.ok && res.newPath) {
+        replaceDirectoryPath(editingDir, res.newPath);
+        // 如果当前目录就是被改名的目录，触发刷新
+        if (currentDir && currentDir.replace(/[/\\]+$/, '') === editingDir.replace(/[/\\]+$/, '')) {
+          clearImages();
+          setCurrentDir(null);
+          queueMicrotask(() => setCurrentDir(res.newPath!));
+        }
+        setEditingDir(null);
+        setEditName('');
+      } else {
+        setError(res.error ?? '重命名失败');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [editingDir, editName, replaceDirectoryPath, currentDir, clearImages, setCurrentDir, setLoading, setError, handleCancelRename]);
 
   const handleDragOver = (e: React.DragEvent) => {
     // 内部列表排序拖拽：不接管，让列表行自己成为 drop 目标
@@ -171,12 +226,13 @@ export function DirectorySidebar() {
           const isActive = currentDir === dir;
           const isDragging = draggingDir === dir;
           const isDropTarget = dropTargetDir === dir;
+          const isEditing = editingDir === dir;
           return (
             <div
               key={dir}
               role="button"
               tabIndex={0}
-              draggable
+              draggable={!isEditing}
               onDragStart={(e) => handleRowDragStart(e, dir)}
               onDragEnd={handleRowDragEnd}
               onDragOver={(e) => handleRowDragOver(e, dir)}
@@ -184,6 +240,7 @@ export function DirectorySidebar() {
               onDrop={(e) => handleRowDrop(e, dir)}
               onClick={() => handleSelectDir(dir)}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleSelectDir(dir)}
+              onDoubleClick={() => handleStartRename(dir)}
               className={cn(
                 'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm',
                 isActive
@@ -196,16 +253,38 @@ export function DirectorySidebar() {
             >
               <GripVertical className="h-4 w-4 shrink-0 text-zinc-500 cursor-grab active:cursor-grabbing" aria-hidden />
               <Folder className="h-4 w-4 shrink-0" />
-              <span className="min-w-0 flex-1 truncate">{name}</span>
-              <button
-                type="button"
-                onClick={(e) => handleRemove(e, dir)}
-                className="shrink-0 rounded p-0.5 text-zinc-500 hover:bg-zinc-600 hover:text-red-400 cursor-pointer"
-                title={t('sidebar.remove')}
-                aria-label={t('sidebar.remove')}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {isEditing ? (
+                <input
+                  ref={editInputRef}
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCommitRename();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      handleCancelRename();
+                    }
+                  }}
+                  onBlur={handleCancelRename}
+                  className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-800/80 px-2 py-1 text-sm text-zinc-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                />
+              ) : (
+                <span className="min-w-0 flex-1 truncate">{name}</span>
+              )}
+              {!isEditing && (
+                <UiButton
+                  variant="ghost"
+                  size="sm"
+                  className="border-none p-0.5"
+                  onClick={(e: React.MouseEvent) => handleRemove(e, dir)}
+                  title={t('sidebar.remove')}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </UiButton>
+              )}
             </div>
           );
         })}

@@ -18,6 +18,7 @@ declare global {
       ): Promise<{ entries: string[]; hasMore: boolean; total: number }>;
       listDirs(dirPath: string): Promise<string[]>;
       removeDirectory(dirPath: string): Promise<void>;
+      renameDirectory(dirPath: string, newName: string): Promise<{ ok: boolean; newPath?: string; error?: string }>;
       deleteFile(filePath: string): Promise<{ ok: boolean; error?: string }>;
       buildSavePath(originalPath: string, nameNoExt: string): Promise<string>;
       showSaveDialogWithSuggestedName(originalPath: string, nameNoExt: string): Promise<string | null>;

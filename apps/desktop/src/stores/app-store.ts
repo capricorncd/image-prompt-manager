@@ -50,6 +50,8 @@ interface AppState {
   removeDirectory: (dir: string) => void;
   /** 拖拽排序：用新的顺序覆盖目录列表（会持久化） */
   setDirectoryListOrder: (ordered: string[]) => void;
+  /** 重命名目录后替换列表中的路径并保持 currentDir */
+  replaceDirectoryPath: (originalPath: string, newPath: string) => void;
   setCurrentDir: (dir: string | null) => void;
   appendImages: (paths: string[], hasMore: boolean, total?: number) => void;
   clearImages: () => void;
@@ -118,6 +120,22 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   setDirectoryListOrder: (ordered) => set({ directoryList: ordered }),
+
+  replaceDirectoryPath: (originalPath, newPath) =>
+    set((s) => {
+      const norm = (p: string) => p.replace(/[/\\]+$/, '');
+      const from = norm(originalPath);
+      const to = norm(newPath);
+      const idx = s.directoryList.findIndex((d) => norm(d) === from);
+      if (idx < 0) return s;
+      const next = [...s.directoryList];
+      next[idx] = to;
+      const currentMatch = s.currentDir ? norm(s.currentDir) === from : false;
+      return {
+        directoryList: next,
+        currentDir: currentMatch ? to : s.currentDir,
+      };
+    }),
 
   setCurrentDir: (dir) =>
     set({ currentDir: dir, imagePaths: [], hasMore: false, totalImageCount: null, selectedPath: null, metadata: null, editedMetadata: null }),

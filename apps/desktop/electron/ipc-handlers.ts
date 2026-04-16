@@ -100,6 +100,59 @@ export function registerIpcHandlers(): void {
     removeOpenedRoot(dirPath);
   });
 
+  /** 重命名目录（同级改名）：仅允许已打开的根目录本身改名 */
+  ipcMain.handle(
+    'fs:renameDir',
+    async (
+      _,
+      dirPath: string,
+      newName: string
+    ): Promise<{ ok: boolean; newPath?: string; error?: string }> => {
+      try {
+        if (!dirPath || typeof dirPath !== 'string') return { ok: false, error: '无效路径' };
+        if (!newName || typeof newName !== 'string') return { ok: false, error: '无效名称' };
+        const resolvedOld = path.resolve(dirPath);
+        const roots = getOpenedRoots().map((p) => path.resolve(p));
+        const isRoot = roots.some((r) => path.resolve(r) === resolvedOld);
+        if (!isRoot) return { ok: false, error: '仅允许重命名已打开的目录' };
+        const trimmed = newName.trim();
+        if (!trimmed) return { ok: false, error: '名称不能为空' };
+        if (trimmed.includes(path.sep) || trimmed.includes('/') || trimmed.includes('\\')) {
+          return { ok: false, error: '名称不能包含路径分隔符' };
+        }
+        const parent = path.dirname(resolvedOld);
+        const resolvedNew = path.join(parent, trimmed);
+        if (path.resolve(resolvedNew) === resolvedOld) return { ok: true, newPath: resolvedOld };
+        if (fs.existsSync(resolvedNew)) return { ok: false, error: '目标已存在' };
+
+        await fs.promises.rename(resolvedOld, resolvedNew);
+
+        // 更新 watcher：停止旧目录监听，启动新目录监听
+        const mainWin = getMainWindow();
+        const oldKey = path.normalize(resolvedOld);
+        const unwatch = unwatchFns.get(oldKey);
+        if (unwatch) {
+          unwatch();
+          unwatchFns.delete(oldKey);
+        }
+        removeOpenedRoot(resolvedOld);
+        addOpenedRoot(resolvedNew);
+        if (mainWin) {
+          const newKey = path.normalize(resolvedNew);
+          const existing = unwatchFns.get(newKey);
+          if (existing) existing();
+          const unwatchNew = watchDirectory(resolvedNew, (event, fullPath) => {
+            mainWin.webContents.send('fs:dir-changed', { event, fullPath });
+          });
+          unwatchFns.set(newKey, unwatchNew);
+        }
+        return { ok: true, newPath: resolvedNew };
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) };
+      }
+    }
+  );
+
   ipcMain.handle(
     'fs:listImages',
     async (
