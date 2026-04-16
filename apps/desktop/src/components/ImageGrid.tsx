@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FixedSizeGrid as Grid } from 'react-window';
-import { RefreshCw, X } from 'lucide-react';
+import { Maximize2, RefreshCw, X } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import { PAGE_SIZE } from '../stores/app-store';
 import { cn } from '../lib/cn';
 import { t } from '../i18n';
+import { LargeImageModal } from './LargeImageModal';
 
 const GAP = 8;
 const MIN_CELL_SIZE = 100;
@@ -34,6 +35,7 @@ export function ImageGrid() {
   const [size, setSize] = useState({ width: 800, height: 560 });
   const [pathToDelete, setPathToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [largeImagePath, setLargeImagePath] = useState<string | null>(null);
 
   const loadPage = useCallback(
     async (offset: number) => {
@@ -95,6 +97,11 @@ export function ImageGrid() {
   const handleDeleteClick = useCallback((e: React.MouseEvent, path: string) => {
     e.stopPropagation();
     setPathToDelete(path);
+  }, []);
+
+  const handleViewLargeClick = useCallback((e: React.MouseEvent, path: string) => {
+    e.stopPropagation();
+    setLargeImagePath(path);
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
@@ -171,7 +178,7 @@ export function ImageGrid() {
               isSelected ? 'border-emerald-500 ring-1 ring-emerald-500/50' : 'border-transparent hover:border-zinc-600'
             )}
           >
-            <div className="relative flex aspect-square items-center justify-center overflow-hidden p-1">
+            <div className="relative flex aspect-square items-center justify-center overflow-hidden p-1 group">
               <img
                 src={`local://image?path=${encodeURIComponent(path)}`}
                 alt=""
@@ -179,6 +186,19 @@ export function ImageGrid() {
                 loading="lazy"
                 decoding="async"
               />
+              <button
+                type="button"
+                onClick={(e) => handleViewLargeClick(e, path)}
+                className={cn(
+                  'absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded bg-zinc-800/90 text-zinc-400',
+                  'opacity-0 transition-opacity group-hover:opacity-100',
+                  'hover:bg-zinc-700 hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500'
+                )}
+                title={t('meta.viewLarge')}
+                aria-label={t('meta.viewLarge')}
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+              </button>
               <button
                 type="button"
                 onClick={(e) => handleDeleteClick(e, path)}
@@ -196,7 +216,7 @@ export function ImageGrid() {
         </div>
       );
     },
-    [imagePaths, columnCount, selectedPath, handleSelect, handleDeleteClick]
+    [imagePaths, columnCount, selectedPath, handleSelect, handleDeleteClick, handleViewLargeClick]
   );
 
   if (!currentDir) {
@@ -249,6 +269,8 @@ export function ImageGrid() {
           {Cell}
         </Grid>
       </div>
+
+      <LargeImageModal open={largeImagePath != null} path={largeImagePath} onClose={() => setLargeImagePath(null)} />
 
       {pathToDelete != null && (
         <div
