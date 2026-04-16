@@ -126,6 +126,18 @@ export function ImageGrid() {
   const rowHeight = columnWidth + GAP + CAPTION_HEIGHT;
   const rowCount = Math.ceil(imagePaths.length / columnCount) || 1;
 
+  // 当内容高度不足以产生滚动条（或窗口变大导致不再可滚动）时，自动继续加载直到可滚动或无更多数据。
+  useEffect(() => {
+    if (!currentDir) return;
+    if (loading || !hasMore) return;
+    if (imagePaths.length === 0) return;
+    if (gridHeight <= 0) return;
+    const totalHeight = rowCount * rowHeight;
+    if (totalHeight - gridHeight < 300) {
+      loadMore();
+    }
+  }, [currentDir, loading, hasMore, imagePaths.length, rowCount, rowHeight, gridHeight, loadMore]);
+
   const Cell = useCallback(
     ({ columnIndex, rowIndex, style }: CellProps) => {
       const index = rowIndex * columnCount + columnIndex;
