@@ -16,8 +16,6 @@ function getInitialLocale(): Locale {
 const initialLocale = getInitialLocale();
 setI18nLocale(initialLocale);
 
-const PAGE_SIZE = 50;
-
 /** 无原始信息时的默认元数据，便于用户仍可改文件名并另存为/覆盖保存 */
 const EMPTY_METADATA: SDImageMetadata = {
   prompt: '',
@@ -53,7 +51,7 @@ interface AppState {
   /** 重命名目录后替换列表中的路径并保持 currentDir */
   replaceDirectoryPath: (originalPath: string, newPath: string) => void;
   setCurrentDir: (dir: string | null) => void;
-  appendImages: (paths: string[], hasMore: boolean, total?: number) => void;
+  setImagePaths: (paths: string[], total: number) => void;
   clearImages: () => void;
   setLoading: (v: boolean) => void;
   selectImage: (path: string | null, meta: SDImageMetadata | null) => void;
@@ -140,12 +138,11 @@ export const useAppStore = create<AppState>((set) => ({
   setCurrentDir: (dir) =>
     set({ currentDir: dir, imagePaths: [], hasMore: false, totalImageCount: null, selectedPath: null, metadata: null, editedMetadata: null }),
 
-  appendImages: (paths, hasMore, total) =>
-    set((s) => ({
-      imagePaths: [...s.imagePaths, ...paths],
-      hasMore,
-      ...(total !== undefined && { totalImageCount: total }),
-    })),
+  setImagePaths: (paths, total) =>
+    set({
+      imagePaths: paths,
+      totalImageCount: total,
+    }),
 
   clearImages: () => set({ imagePaths: [], hasMore: false, totalImageCount: null }),
 
@@ -238,4 +235,3 @@ useAppStore.subscribe((state) => {
   }
 });
 
-export { PAGE_SIZE };

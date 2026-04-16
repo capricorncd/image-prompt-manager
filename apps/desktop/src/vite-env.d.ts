@@ -13,9 +13,7 @@ declare global {
       addDirectoryByPath(dirPath: string): Promise<string | null>;
       listImages(
         dirPath: string,
-        offset: number,
-        limit: number
-      ): Promise<{ entries: string[]; hasMore: boolean; total: number }>;
+      ): Promise<{ entries: string[]; total: number }>;
       listDirs(dirPath: string): Promise<string[]>;
       removeDirectory(dirPath: string): Promise<void>;
       renameDirectory(dirPath: string, newName: string): Promise<{ ok: boolean; newPath?: string; error?: string }>;

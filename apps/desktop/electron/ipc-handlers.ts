@@ -158,16 +158,14 @@ export function registerIpcHandlers(): void {
     async (
       _,
       dirPath: string,
-      offset: number,
-      limit: number
-    ): Promise<{ entries: string[]; hasMore: boolean; total: number }> => {
+    ): Promise<{ entries: string[]; total: number }> => {
       const resolved = path.resolve(dirPath);
       const roots = getOpenedRoots();
       const underAny = roots.some((root) => isPathUnderBase(resolved, root));
       if (!underAny) {
-        return { entries: [], hasMore: false, total: 0 };
+        return { entries: [],  total: 0 };
       }
-      return listImageFiles(resolved, offset, limit);
+      return listImageFiles(resolved);
     }
   );
 

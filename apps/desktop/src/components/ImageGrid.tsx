@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+// TODO: 删除这个依赖，一次性全部加载，不分页
 import { FixedSizeGrid as Grid } from 'react-window';
 import { Maximize2, RefreshCw, X } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
-import { PAGE_SIZE } from '../stores/app-store';
 import { cn } from '../lib/cn';
 import { t } from '../i18n';
 import { LargeImageModal } from './LargeImageModal';
@@ -24,7 +24,7 @@ export function ImageGrid() {
   const totalImageCount = useAppStore((s) => s.totalImageCount);
   const loading = useAppStore((s) => s.loading);
   const selectedPath = useAppStore((s) => s.selectedPath);
-  const appendImages = useAppStore((s) => s.appendImages);
+  const setImagePaths = useAppStore((s) => s.setImagePaths);
   const clearImages = useAppStore((s) => s.clearImages);
   const setLoading = useAppStore((s) => s.setLoading);
   const selectImage = useAppStore((s) => s.selectImage);
@@ -39,26 +39,24 @@ export function ImageGrid() {
   const [showLargeImageModal, setShowLargeImageModal] = useState(false);
 
   const loadPage = useCallback(
-    async (offset: number) => {
+    async () => {
       if (!currentDir || !window.electronAPI?.listImages) return;
       setLoading(true);
       try {
-        const { entries, hasMore: more, total } = await window.electronAPI.listImages(
+        const { entries, total } = await window.electronAPI.listImages(
           currentDir,
-          offset,
-          PAGE_SIZE
         );
-        appendImages(entries, more, total);
+        setImagePaths(entries, total);
       } finally {
         setLoading(false);
       }
     },
-    [currentDir, appendImages, setLoading]
+    [currentDir, setImagePaths, setLoading]
   );
 
   useEffect(() => {
     if (!currentDir) return;
-    loadPage(0);
+    loadPage();
   }, [currentDir, loadPage]);
 
   useEffect(() => {
@@ -75,15 +73,10 @@ export function ImageGrid() {
     return () => ro.disconnect();
   }, [currentDir]);
 
-  const loadMore = useCallback(() => {
-    if (loading || !hasMore || imagePaths.length === 0) return;
-    loadPage(imagePaths.length);
-  }, [loading, hasMore, imagePaths.length, loadPage]);
-
   const handleRefresh = useCallback(() => {
     if (!currentDir || loading) return;
     clearImages();
-    loadPage(0);
+    loadPage();
   }, [currentDir, loading, clearImages, loadPage]);
 
   const handleSelect = useCallback(
@@ -138,18 +131,6 @@ export function ImageGrid() {
   const columnWidth = widthForColumns / columnCount;
   const rowHeight = columnWidth + GAP + CAPTION_HEIGHT;
   const rowCount = Math.ceil(imagePaths.length / columnCount) || 1;
-
-  // 当内容高度不足以产生滚动条（或窗口变大导致不再可滚动）时，自动继续加载直到可滚动或无更多数据。
-  useEffect(() => {
-    if (!currentDir) return;
-    if (loading || !hasMore) return;
-    if (imagePaths.length === 0) return;
-    if (gridHeight <= 0) return;
-    const totalHeight = rowCount * rowHeight;
-    if (totalHeight - gridHeight < 300) {
-      loadMore();
-    }
-  }, [currentDir, loading, hasMore, imagePaths.length, rowCount, rowHeight, gridHeight, loadMore]);
 
   const Cell = useCallback(
     ({ columnIndex, rowIndex, style }: CellProps) => {
@@ -267,10 +248,6 @@ export function ImageGrid() {
           width={widthForColumns}
           overscanRowCount={3}
           style={{ overflowX: 'hidden' }}
-          onScroll={({ scrollTop }) => {
-            const totalHeight = rowCount * rowHeight;
-            if (totalHeight - scrollTop - gridHeight < 300) loadMore();
-          }}
         >
           {Cell}
         </Grid>
@@ -281,7 +258,7 @@ export function ImageGrid() {
         path={largeImageIndex != null ? imagePaths[largeImageIndex] : null}
         onClose={() => setShowLargeImageModal(false)}
         currentIndex={largeImageIndex != null ? largeImageIndex : undefined}
-        total={imagePaths.length || undefined}
+        total={totalImageCount ?? undefined}
         allowNavigation={true}
         onPrev={
           () => setLargeImageIndex((prev) => prev <= 0 ? imagePaths.length - 1 : prev - 1)

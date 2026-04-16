@@ -27,17 +27,14 @@ export async function listDirectories(dirPath: string): Promise<string[]> {
  */
 export async function listImageFiles(
   dirPath: string,
-  offset: number,
-  limit: number
-): Promise<{ entries: string[]; hasMore: boolean; total: number }> {
+): Promise<{ entries: string[]; total: number }> {
   const names = await fs.promises.readdir(dirPath, { withFileTypes: true });
   const files = names
     .filter((d) => d.isFile() && isImageFile(d.name))
     .map((d) => path.join(dirPath, d.name))
     .sort((a, b) => a.localeCompare(b));
   const total = files.length;
-  const entries = files.slice(offset, offset + limit);
-  return { entries, hasMore: offset + entries.length < total, total };
+  return { entries: files, total };
 }
 
 const watchers = new Map<string, FSWatcher>();
