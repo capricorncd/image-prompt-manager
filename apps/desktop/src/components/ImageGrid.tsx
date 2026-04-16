@@ -35,7 +35,8 @@ export function ImageGrid() {
   const [size, setSize] = useState({ width: 800, height: 560 });
   const [pathToDelete, setPathToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [largeImageIndex, setLargeImageIndex] = useState<number | null>(null);
+  const [largeImageIndex, setLargeImageIndex] = useState<number>(0);
+  const [showLargeImageModal, setShowLargeImageModal] = useState(false);
 
   const loadPage = useCallback(
     async (offset: number) => {
@@ -104,19 +105,10 @@ export function ImageGrid() {
       e.stopPropagation();
       const idx = imagePaths.indexOf(path);
       if (idx >= 0) setLargeImageIndex(idx);
+      setShowLargeImageModal(true);
     },
     [imagePaths]
   );
-
-  // 若列表变化导致当前索引越界，则关闭大图或回退到最后一张
-  useEffect(() => {
-    if (largeImageIndex == null) return;
-    if (imagePaths.length === 0) {
-      setLargeImageIndex(null);
-    } else if (largeImageIndex >= imagePaths.length) {
-      setLargeImageIndex(imagePaths.length - 1);
-    }
-  }, [largeImageIndex, imagePaths.length]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!pathToDelete || !window.electronAPI?.deleteFile) return;
@@ -285,20 +277,17 @@ export function ImageGrid() {
       </div>
 
       <LargeImageModal
-        open={largeImageIndex != null && imagePaths.length > 0}
+        open={showLargeImageModal}
         path={largeImageIndex != null ? imagePaths[largeImageIndex] : null}
-        onClose={() => setLargeImageIndex(null)}
+        onClose={() => setShowLargeImageModal(false)}
         currentIndex={largeImageIndex != null ? largeImageIndex : undefined}
         total={imagePaths.length || undefined}
+        allowNavigation={true}
         onPrev={
-          imagePaths.length > 0 && largeImageIndex != null
-            ? () => setLargeImageIndex((prev) => (prev == null ? 0 : (prev - 1 + imagePaths.length) % imagePaths.length))
-            : undefined
+          () => setLargeImageIndex((prev) => prev <= 0 ? imagePaths.length - 1 : prev - 1)
         }
         onNext={
-          imagePaths.length > 0 && largeImageIndex != null
-            ? () => setLargeImageIndex((prev) => (prev == null ? 0 : (prev + 1) % imagePaths.length))
-            : undefined
+          () => setLargeImageIndex((prev) => (prev >= imagePaths.length - 1 ? 0 : prev + 1))
         }
       />
 

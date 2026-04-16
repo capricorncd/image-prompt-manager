@@ -1,24 +1,29 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { t } from '../i18n';
-import type { JSX } from 'react';
+import type { ReactNode } from 'react';
 
-export function LargeImageModal(props: {
+interface Props {
   open: boolean;
   path: string | null;
   onClose: () => void;
   title?: string;
+  /** 是否允许通过左右键切换并显示计数（列表大图用） */
+  allowNavigation?: boolean;
   currentIndex?: number;
   total?: number;
   onPrev?: () => void;
   onNext?: () => void;
-}): JSX.Element | null {
-  const { open, path, onClose, title, currentIndex, total, onPrev, onNext } = props;
+}
+
+export function LargeImageModal(props: Props): ReactNode | null {
+  const { open, path, onClose, title, allowNavigation, currentIndex, total, onPrev, onNext } = props;
   if (!open || !path) return null;
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent): void => {
+      if (!allowNavigation) return;
       if (e.key === 'ArrowLeft') {
         if (onPrev) {
           e.preventDefault();
@@ -36,7 +41,7 @@ export function LargeImageModal(props: {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onPrev, onNext, onClose]);
+  }, [open, allowNavigation, onPrev, onNext, onClose]);
 
   return (
     <div
@@ -51,16 +56,9 @@ export function LargeImageModal(props: {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-zinc-700 px-4 py-2">
-          <div className="flex min-w-0 flex-1 flex-col">
-            <h2 id="large-image-title" className="truncate text-sm font-medium text-zinc-200">
-              {title ?? path.replace(/^.*[/\\]/, '')}
-            </h2>
-            {total != null && currentIndex != null && total > 0 && (
-              <span className="mt-0.5 text-[11px] text-zinc-500">
-                {currentIndex + 1}/{total}
-              </span>
-            )}
-          </div>
+          <h2 id="large-image-title" className="truncate text-sm font-medium text-zinc-200">
+            {title ?? path.replace(/^.*[/\\]/, '')}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -78,6 +76,13 @@ export function LargeImageModal(props: {
           />
         </div>
       </div>
+      {allowNavigation && total != null && currentIndex != null && total > 0 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 flex justify-center">
+          <div className="rounded-full bg-black/70 px-3 py-1 text-xs text-zinc-200">
+            {currentIndex + 1}/{total}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
