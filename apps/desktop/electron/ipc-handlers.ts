@@ -49,6 +49,17 @@ export function registerIpcHandlers(): void {
     return dir;
   });
 
+  /** 仅选择输出目录，不加入已打开目录也不监听变更 */
+  ipcMain.handle('dialog:chooseOutputDirectory', async (): Promise<string | null> => {
+    const win = getMainWindow() ?? undefined;
+    const result = await dialog.showOpenDialog(win as InstanceType<typeof BrowserWindow>, {
+      properties: ['openDirectory', 'createDirectory'],
+      title: '选择导出目录',
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return path.resolve(result.filePaths[0]!);
+  });
+
   /** 拖入路径（文件或文件夹）：若是文件则取其所在目录，加入已打开列表并开启监听，返回解析后的目录路径或 null */
   ipcMain.handle('dialog:addDirectoryByPath', async (_, rawPath: string): Promise<string | null> => {
     if (!rawPath || typeof rawPath !== 'string') return null;
@@ -265,11 +276,6 @@ export function registerIpcHandlers(): void {
         return { ok: false, error: '路径不在当前工作目录内' };
       }
       const targetResolved = path.resolve(targetPath);
-      const roots = getOpenedRoots();
-      const targetUnderAny = roots.some((r) => isPathUnderBase(targetResolved, r));
-      if (roots.length > 0 && !targetUnderAny) {
-        return { ok: false, error: '目标路径不在当前工作目录内' };
-      }
       try {
         await saveImageWithMetadata(path.resolve(originalPath), meta, targetResolved);
         return { ok: true };

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Save, Copy, X, ImageIcon } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Save, Copy, X, ImageIcon, CheckSquare, Square } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import type { SDImageMetadata } from '../types/metadata';
 import { cn } from '../lib/cn';
@@ -36,6 +36,10 @@ function getBasename(filePath: string): string {
   return filePath.replace(/^.*[/\\]/, '') || filePath;
 }
 
+function normalizePath(filePath: string): string {
+  return filePath.replace(/\\/g, '/');
+}
+
 /** 文件名不含后缀，用于文件名框展示 */
 function getBasenameWithoutExt(filePath: string): string {
   const base = getBasename(filePath);
@@ -43,8 +47,29 @@ function getBasenameWithoutExt(filePath: string): string {
   return dot > 0 ? base.slice(0, dot) : base;
 }
 
+function getExt(filePath: string): string {
+  const base = getBasename(filePath);
+  const dot = base.lastIndexOf('.');
+  return dot > 0 ? base.slice(dot) : '.png';
+}
+
+function buildBatchNameNoExt(sourcePath: string, index: number, renameEnabled: boolean, prefix: string): string {
+  const rawBase = renameEnabled ? prefix.trim() || getBasenameWithoutExt(sourcePath) : getBasenameWithoutExt(sourcePath);
+  const suffix = `[_${String(index + 1).padStart(3, '0')}]`;
+  return `${rawBase}${suffix}`;
+}
+
+function buildPathInDirectory(dirPath: string, fileName: string): string {
+  const sep = dirPath.includes('\\') ? '\\' : '/';
+  const cleanDir = dirPath.replace(/[\\/]+$/, '');
+  return `${cleanDir}${sep}${fileName}`;
+}
+
 export function MetadataPanel() {
+  const imagePaths = useAppStore((s) => s.imagePaths);
   const selectedPath = useAppStore((s) => s.selectedPath);
+  const batchMode = useAppStore((s) => s.batchMode);
+  const batchSelectedPaths = useAppStore((s) => s.batchSelectedPaths);
   const editedMetadata = useAppStore((s) => s.editedMetadata);
   const rawMetadata = useAppStore((s) => s.rawMetadata);
   const setEditedMetadata = useAppStore((s) => s.setEditedMetadata);
@@ -56,14 +81,28 @@ export function MetadataPanel() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [editableFilename, setEditableFilename] = useState('');
+  const [batchRenameEnabled, setBatchRenameEnabled] = useState(false);
+  const [batchFilenamePrefix, setBatchFilenamePrefix] = useState('');
   const [showRawModal, setShowRawModal] = useState(false);
   const [showLargeImageModal, setShowLargeImageModal] = useState(false);
 
   const meta = editedMetadata ?? emptyMeta();
+  const orderedBatchSelectedPaths = useMemo(() => {
+    if (batchSelectedPaths.length === 0) return [];
+    const selectedSet = new Set(batchSelectedPaths.map((p) => normalizePath(p)));
+    return imagePaths.filter((p) => selectedSet.has(normalizePath(p)));
+  }, [imagePaths, batchSelectedPaths]);
 
   useEffect(() => {
-    if (selectedPath) setEditableFilename(getBasenameWithoutExt(selectedPath));
-  }, [selectedPath]);
+    if (selectedPath && !batchMode) setEditableFilename(getBasenameWithoutExt(selectedPath));
+  }, [selectedPath, batchMode]);
+
+  useEffect(() => {
+    if (!batchMode) {
+      setBatchRenameEnabled(false);
+      setBatchFilenamePrefix('');
+    }
+  }, [batchMode]);
 
   const update = useCallback(
     (patch: Partial<SDImageMetadata>) => {
@@ -80,6 +119,53 @@ export function MetadataPanel() {
   }, [toast]);
 
   const handleSaveAs = useCallback(async () => {
+    const metadataToWrite = editedMetadata ?? emptyMeta();
+    if (batchMode) {
+      if (orderedBatchSelectedPaths.length === 0) {
+        setToast(t('meta.selectBatchFirst'));
+        return;
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        const api = window.electronAPI;
+        if (!api?.chooseOutputDirectory) {
+          setToast(t('meta.saveAsUnsupported'));
+          return;
+        }
+        const targetDir = await api.chooseOutputDirectory();
+        if (!targetDir) {
+          setToast(t('meta.cancelled'));
+          return;
+        }
+        let successCount = 0;
+        let failedCount = 0;
+        for (let i = 0; i < orderedBatchSelectedPaths.length; i += 1) {
+          const sourcePath = orderedBatchSelectedPaths[i]!;
+          const nameNoExt = buildBatchNameNoExt(sourcePath, i, batchRenameEnabled, batchFilenamePrefix);
+          const targetPath = buildPathInDirectory(targetDir, `${nameNoExt}${getExt(sourcePath)}`);
+          const result = await api.saveImageWithMetadata(sourcePath, targetPath, metadataToWrite);
+          if (result.ok) {
+            successCount += 1;
+          } else {
+            failedCount += 1;
+          }
+        }
+        setToast(
+          `${t('meta.batchSaveAsDone', { n: successCount })}${
+            failedCount > 0 ? t('meta.batchPartialFailed', { n: failedCount }) : ''
+          }`
+        );
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
+        setToast(msg);
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (!selectedPath || !editedMetadata) {
       setToast(t('meta.selectImageFirst'));
       return;
@@ -104,11 +190,6 @@ export function MetadataPanel() {
       }
       const result = await api.saveImageWithMetadata(selectedPath, target, editedMetadata);
       if (result.ok) {
-        // TODO: 自动刷新列表？
-        // replaceImagePath(selectedPath, target);
-        // const fresh = await window.electronAPI.readImageMetadata(target);
-        // selectImage(target, fresh ? fresh.parameters : null);
-        // setRawMetadata(fresh?.tags ?? {});
         setToast(t('meta.savedAs'));
       } else {
         setError(result.error ?? t('meta.saveFailed'));
@@ -121,9 +202,98 @@ export function MetadataPanel() {
     } finally {
       setSaving(false);
     }
-  }, [selectedPath, editedMetadata, editableFilename, setError, replaceImagePath]);
+  }, [
+    selectedPath,
+    editedMetadata,
+    editableFilename,
+    setError,
+    batchMode,
+    orderedBatchSelectedPaths,
+    batchRenameEnabled,
+    batchFilenamePrefix,
+  ]);
 
   const handleOverwrite = useCallback(async () => {
+    const metadataToWrite = editedMetadata ?? emptyMeta();
+    if (batchMode) {
+      if (orderedBatchSelectedPaths.length === 0) {
+        setToast(t('meta.selectBatchFirst'));
+        return;
+      }
+      setSaving(true);
+      setError(null);
+      let successCount = 0;
+      let failedCount = 0;
+      const updatedPaths: string[] = [];
+      try {
+        for (let i = 0; i < orderedBatchSelectedPaths.length; i += 1) {
+          const sourcePath = orderedBatchSelectedPaths[i]!;
+          let targetPath = sourcePath;
+          if (batchRenameEnabled) {
+            const targetNameNoExt = buildBatchNameNoExt(
+              sourcePath,
+              i,
+              batchRenameEnabled,
+              batchFilenamePrefix
+            );
+            targetPath = await window.electronAPI.buildSavePath(sourcePath, targetNameNoExt);
+            if (!targetPath) {
+              failedCount += 1;
+              continue;
+            }
+          }
+
+          const samePath = normalizePath(targetPath) === normalizePath(sourcePath);
+          if (samePath) {
+            const result = await window.electronAPI.writeImageMetadata(sourcePath, metadataToWrite);
+            if (result.ok) {
+              successCount += 1;
+              updatedPaths.push(sourcePath);
+            } else {
+              failedCount += 1;
+            }
+            continue;
+          }
+
+          const saveResult = await window.electronAPI.saveImageWithMetadata(
+            sourcePath,
+            targetPath,
+            metadataToWrite
+          );
+          if (!saveResult.ok) {
+            failedCount += 1;
+            continue;
+          }
+          replaceImagePath(sourcePath, targetPath);
+          updatedPaths.push(targetPath);
+          successCount += 1;
+          const delResult = await window.electronAPI.deleteFile(sourcePath);
+          if (!delResult.ok) {
+            setError(delResult.error ?? t('meta.originalDeleteFailed'));
+          }
+        }
+
+        const firstPath = updatedPaths[0];
+        if (firstPath) {
+          const fresh = await window.electronAPI.readImageMetadata(firstPath);
+          selectImage(firstPath, fresh ? fresh.parameters : null);
+          setRawMetadata(fresh?.tags ?? {});
+        }
+        setToast(
+          `${t('meta.batchSaveDone', { n: successCount })}${
+            failedCount > 0 ? t('meta.batchPartialFailed', { n: failedCount }) : ''
+          }`
+        );
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
+        setToast(msg);
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (!selectedPath || !editedMetadata) return;
     setSaving(true);
     setError(null);
@@ -186,9 +356,20 @@ export function MetadataPanel() {
     } finally {
       setSaving(false);
     }
-  }, [selectedPath, editedMetadata, editableFilename, setError, replaceImagePath, selectImage]);
+  }, [
+    selectedPath,
+    editedMetadata,
+    editableFilename,
+    setError,
+    replaceImagePath,
+    selectImage,
+    batchMode,
+    orderedBatchSelectedPaths,
+    batchRenameEnabled,
+    batchFilenamePrefix,
+  ]);
 
-  if (!selectedPath) {
+  if (!selectedPath && !batchMode) {
     return (
       <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-700 bg-zinc-900/80">
         <div className="flex h-12 items-center gap-2 border-b border-zinc-700 p-3">
@@ -209,12 +390,21 @@ export function MetadataPanel() {
   return (
     <aside className="relative flex w-80 shrink-0 flex-col border-l border-zinc-700 bg-zinc-900/80">
       <div className="flex h-12 w-full shrink-0 items-center justify-between border-b border-zinc-700 p-3">
-        <span className="text-sm font-medium text-zinc-400">{t('meta.imageInfo')}</span>
+        <span className="text-sm font-medium text-zinc-400">
+          {t('meta.imageInfo')}
+          {batchMode ? ` (${orderedBatchSelectedPaths.length})` : ''}
+        </span>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setShowLargeImageModal(true)}
-            className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+            disabled={batchMode || !selectedPath}
+            className={cn(
+              'flex shrink-0 items-center gap-1.5 rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs',
+              batchMode || !selectedPath
+                ? 'cursor-not-allowed text-zinc-600 opacity-70'
+                : 'cursor-pointer text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+            )}
             title={t('meta.viewLarge')}
           >
             <ImageIcon className="h-3.5 w-3.5" />
@@ -223,7 +413,13 @@ export function MetadataPanel() {
           <button
             type="button"
             onClick={() => setShowRawModal(true)}
-            className="shrink-0 cursor-pointer rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+            disabled={batchMode || !selectedPath}
+            className={cn(
+              'shrink-0 rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs',
+              batchMode || !selectedPath
+                ? 'cursor-not-allowed text-zinc-600 opacity-70'
+                : 'cursor-pointer text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+            )}
             title={t('meta.rawInfo')}
           >
             {t('meta.rawInfo')}
@@ -272,16 +468,43 @@ export function MetadataPanel() {
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-zinc-500">{t('meta.filename')}</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              className={cn(input, 'min-w-0 flex-1')}
-              value={editableFilename}
-              onChange={(e) => setEditableFilename(e.target.value)}
-              placeholder={t('meta.filenamePlaceholder')}
-              title={selectedPath}
-            />
-          </div>
+          {batchMode ? (
+            <div className="space-y-2">
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-zinc-400">
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={batchRenameEnabled}
+                  onChange={(e) => setBatchRenameEnabled(e.target.checked)}
+                />
+                {batchRenameEnabled ? (
+                  <CheckSquare className="h-4 w-4 text-emerald-400" />
+                ) : (
+                  <Square className="h-4 w-4 text-zinc-500" />
+                )}
+                <span>{t('meta.batchNaming')}</span>
+              </label>
+              <input
+                type="text"
+                className={cn(input, 'min-w-0 flex-1', !batchRenameEnabled && 'cursor-not-allowed opacity-50')}
+                value={batchFilenamePrefix}
+                onChange={(e) => setBatchFilenamePrefix(e.target.value)}
+                placeholder={t('meta.batchFilenamePrefix')}
+                disabled={!batchRenameEnabled}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                className={cn(input, 'min-w-0 flex-1')}
+                value={editableFilename}
+                onChange={(e) => setEditableFilename(e.target.value)}
+                placeholder={t('meta.filenamePlaceholder')}
+                title={selectedPath ?? undefined}
+              />
+            </div>
+          )}
           <div className="flex justify-between pt-2 text-xs text-zinc-500">
             <span>
               {String(rawMetadata.ImageWidth ?? '')} x {String(rawMetadata.ImageHeight ?? '')} px

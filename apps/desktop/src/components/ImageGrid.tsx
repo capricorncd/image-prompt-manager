@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 // TODO: 删除这个依赖，一次性全部加载，不分页
 import { FixedSizeGrid as Grid } from 'react-window';
-import { Maximize2, RefreshCw, X } from 'lucide-react';
+import { CheckSquare, Maximize2, RefreshCw, Square, X } from 'lucide-react';
 import { useAppStore } from '../stores/app-store';
 import { cn } from '../lib/cn';
 import { t } from '../i18n';
@@ -24,10 +24,15 @@ export function ImageGrid() {
   const totalImageCount = useAppStore((s) => s.totalImageCount);
   const loading = useAppStore((s) => s.loading);
   const selectedPath = useAppStore((s) => s.selectedPath);
+  const batchMode = useAppStore((s) => s.batchMode);
+  const batchSelectedPaths = useAppStore((s) => s.batchSelectedPaths);
   const setImagePaths = useAppStore((s) => s.setImagePaths);
   const clearImages = useAppStore((s) => s.clearImages);
   const setLoading = useAppStore((s) => s.setLoading);
   const selectImage = useAppStore((s) => s.selectImage);
+  const setBatchMode = useAppStore((s) => s.setBatchMode);
+  const toggleBatchSelection = useAppStore((s) => s.toggleBatchSelection);
+  const clearBatchSelection = useAppStore((s) => s.clearBatchSelection);
   const setRawMetadata = useAppStore((s) => s.setRawMetadata);
   const removeImagePath = useAppStore((s) => s.removeImagePath);
   const gridRef = useRef<Grid>(null);
@@ -74,13 +79,49 @@ export function ImageGrid() {
     loadPage();
   }, [currentDir, loading, clearImages, loadPage]);
 
+  const isBatchSelected = useCallback(
+    (path: string) => {
+      const normalized = path.replace(/\\/g, '/');
+      return batchSelectedPaths.some((p) => p.replace(/\\/g, '/') === normalized);
+    },
+    [batchSelectedPaths]
+  );
+
   const handleSelect = useCallback(
     async (path: string) => {
+      if (batchMode) {
+        const currentlySelected = isBatchSelected(path);
+        toggleBatchSelection(path);
+        if (currentlySelected) {
+          if (selectedPath && selectedPath.replace(/\\/g, '/') === path.replace(/\\/g, '/')) {
+            const fallbackPath = batchSelectedPaths.find(
+              (p) => p.replace(/\\/g, '/') !== path.replace(/\\/g, '/')
+            );
+            if (fallbackPath) {
+              const fallbackMeta = await window.electronAPI.readImageMetadata(fallbackPath);
+              selectImage(fallbackPath, fallbackMeta.parameters);
+              setRawMetadata(fallbackMeta.tags);
+            } else {
+              selectImage(null, null);
+              setRawMetadata({});
+            }
+          }
+          return;
+        }
+      }
       const meta = await window.electronAPI.readImageMetadata(path);
       selectImage(path, meta.parameters);
       setRawMetadata(meta.tags);
     },
-    [selectImage, setRawMetadata]
+    [
+      batchMode,
+      isBatchSelected,
+      toggleBatchSelection,
+      batchSelectedPaths,
+      selectedPath,
+      selectImage,
+      setRawMetadata,
+    ]
   );
 
   const handleDeleteClick = useCallback((e: React.MouseEvent, path: string) => {
@@ -120,6 +161,15 @@ export function ImageGrid() {
     if (!deleting) setPathToDelete(null);
   }, [deleting]);
 
+  const handleToggleBatchMode = useCallback(() => {
+    if (batchMode) {
+      setBatchMode(false);
+      clearBatchSelection();
+      return;
+    }
+    setBatchMode(true);
+  }, [batchMode, setBatchMode, clearBatchSelection]);
+
   const { width: gridWidth, height: gridHeight } = size;
   const widthForColumns = Math.max(MIN_CELL_SIZE, gridWidth - GAP);
   const columnCount = Math.max(1, Math.floor((widthForColumns + GAP) / (MIN_CELL_SIZE + GAP)));
@@ -133,7 +183,7 @@ export function ImageGrid() {
       const path = imagePaths[index];
       if (!path) return <div style={style} />;
       const name = path.replace(/^.*[/\\]/, '');
-      const isSelected = selectedPath === path;
+      const isSelected = batchMode ? isBatchSelected(path) : selectedPath === path;
       return (
         <div
           style={{
@@ -185,12 +235,32 @@ export function ImageGrid() {
               </button>
               <button
                 type="button"
-                onClick={(e) => handleDeleteClick(e, path)}
-                className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded bg-zinc-800/90 text-zinc-400 hover:bg-red-600/90 hover:text-white focus:ring-2 focus:ring-red-500 focus:outline-none"
-                title={t('grid.deleteImage')}
-                aria-label={t('sidebar.remove')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (batchMode) {
+                    void handleSelect(path);
+                    return;
+                  }
+                  handleDeleteClick(e, path);
+                }}
+                className={cn(
+                  'absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded bg-zinc-800/90 focus:ring-2 focus:outline-none',
+                  batchMode
+                    ? 'text-zinc-100 hover:bg-zinc-700 focus:ring-emerald-500'
+                    : 'text-zinc-400 hover:bg-red-600/90 hover:text-white focus:ring-red-500'
+                )}
+                title={batchMode ? t('grid.batchSelect') : t('grid.deleteImage')}
+                aria-label={batchMode ? t('grid.batchSelect') : t('sidebar.remove')}
               >
-                <X className="h-3.5 w-3.5" />
+                {batchMode ? (
+                  isSelected ? (
+                    <CheckSquare className="h-3.5 w-3.5" />
+                  ) : (
+                    <Square className="h-3.5 w-3.5" />
+                  )
+                ) : (
+                  <X className="h-3.5 w-3.5" />
+                )}
               </button>
             </div>
             <span className="truncate px-1 pb-1 text-center text-xs text-zinc-400" title={name}>
@@ -200,7 +270,16 @@ export function ImageGrid() {
         </div>
       );
     },
-    [imagePaths, columnCount, selectedPath, handleSelect, handleDeleteClick, handleViewLargeClick]
+    [
+      imagePaths,
+      columnCount,
+      selectedPath,
+      batchMode,
+      isBatchSelected,
+      handleSelect,
+      handleDeleteClick,
+      handleViewLargeClick,
+    ]
   );
 
   if (!currentDir) {
@@ -221,6 +300,22 @@ export function ImageGrid() {
         </span>
         <div className="flex items-center gap-2">
           {loading && <span className="text-xs text-zinc-500">{t('grid.loading')}</span>}
+          <button
+            type="button"
+            onClick={handleToggleBatchMode}
+            disabled={loading}
+            className={cn(
+              'flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors',
+              batchMode
+                ? 'bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30'
+                : 'text-zinc-400 hover:bg-zinc-700/80 hover:text-zinc-200',
+              'disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-zinc-400'
+            )}
+            title={batchMode ? t('grid.batchCancel') : t('grid.batchSelect')}
+          >
+            {batchMode ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+            {batchMode ? t('grid.batchCancel') : t('grid.batchSelect')}
+          </button>
           <button
             type="button"
             onClick={handleRefresh}

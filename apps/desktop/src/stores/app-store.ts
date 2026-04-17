@@ -40,6 +40,8 @@ interface AppState {
   totalImageCount: number | null;
   loading: boolean;
   selectedPath: string | null;
+  batchMode: boolean;
+  batchSelectedPaths: string[];
   rawMetadata: Record<string, unknown>;
   metadata: SDImageMetadata | null;
   editedMetadata: SDImageMetadata | null;
@@ -55,6 +57,9 @@ interface AppState {
   clearImages: () => void;
   setLoading: (v: boolean) => void;
   selectImage: (path: string | null, meta: SDImageMetadata | null) => void;
+  setBatchMode: (enabled: boolean) => void;
+  toggleBatchSelection: (path: string) => void;
+  clearBatchSelection: () => void;
   setRawMetadata: (tags: Record<string, unknown>) => void;
   setEditedMetadata: (meta: SDImageMetadata | null) => void;
   setError: (msg: string | null) => void;
@@ -77,6 +82,8 @@ export const useAppStore = create<AppState>((set) => ({
   totalImageCount: null,
   loading: false,
   selectedPath: null,
+  batchMode: false,
+  batchSelectedPaths: [],
   rawMetadata: {},
   metadata: null,
   editedMetadata: null,
@@ -112,6 +119,7 @@ export const useAppStore = create<AppState>((set) => ({
         hasMore: false,
         totalImageCount: nextCurrent === s.currentDir ? s.totalImageCount : null,
         selectedPath: null,
+        batchSelectedPaths: [],
         metadata: null,
         editedMetadata: null,
       };
@@ -142,6 +150,7 @@ export const useAppStore = create<AppState>((set) => ({
       hasMore: false,
       totalImageCount: null,
       selectedPath: null,
+      batchSelectedPaths: [],
       metadata: null,
       editedMetadata: null,
     }),
@@ -159,6 +168,33 @@ export const useAppStore = create<AppState>((set) => ({
   selectImage: (path, meta) =>
     set({ selectedPath: path, metadata: meta, editedMetadata: meta ? { ...meta } : { ...EMPTY_METADATA } }),
 
+  setBatchMode: (enabled) =>
+    set((s) => ({
+      batchMode: enabled,
+      batchSelectedPaths: enabled ? s.batchSelectedPaths : [],
+    })),
+
+  toggleBatchSelection: (path) =>
+    set((s) => {
+      const norm = (p: string) => p.replace(/\\/g, '/');
+      const target = norm(path);
+      const exists = s.batchSelectedPaths.some((p) => norm(p) === target);
+      if (exists) {
+        const nextBatchSelectedPaths = s.batchSelectedPaths.filter((p) => norm(p) !== target);
+        const selectedRemoved = s.selectedPath ? norm(s.selectedPath) === target : false;
+        return {
+          batchSelectedPaths: nextBatchSelectedPaths,
+          selectedPath: selectedRemoved ? null : s.selectedPath,
+        };
+      }
+      return { batchSelectedPaths: [...s.batchSelectedPaths, path] };
+    }),
+
+  clearBatchSelection: () =>
+    set({
+      batchSelectedPaths: [],
+    }),
+
   setEditedMetadata: (meta) => set({ editedMetadata: meta }),
 
   setError: (msg) => set({ error: msg }),
@@ -169,6 +205,7 @@ export const useAppStore = create<AppState>((set) => ({
       hasMore: false,
       totalImageCount: null,
       selectedPath: null,
+      batchSelectedPaths: [],
       metadata: null,
       editedMetadata: null,
     }),
@@ -182,9 +219,13 @@ export const useAppStore = create<AppState>((set) => ({
       const nextPaths = [...s.imagePaths];
       nextPaths[idx] = newPath;
       const selectedMatch = s.selectedPath ? norm(s.selectedPath) === target : false;
+      const nextBatchSelectedPaths = s.batchSelectedPaths.map((p) =>
+        norm(p) === target ? newPath : p
+      );
       return {
         imagePaths: nextPaths,
         selectedPath: selectedMatch ? newPath : s.selectedPath,
+        batchSelectedPaths: nextBatchSelectedPaths,
       };
     }),
 
@@ -195,9 +236,11 @@ export const useAppStore = create<AppState>((set) => ({
       const nextPaths = s.imagePaths.filter((p) => norm(p) !== target);
       if (nextPaths.length === s.imagePaths.length) return s;
       const wasSelected = s.selectedPath ? norm(s.selectedPath) === target : false;
+      const nextBatchSelectedPaths = s.batchSelectedPaths.filter((p) => norm(p) !== target);
       return {
         imagePaths: nextPaths,
         selectedPath: wasSelected ? null : s.selectedPath,
+        batchSelectedPaths: nextBatchSelectedPaths,
         metadata: wasSelected ? null : s.metadata,
         editedMetadata: wasSelected ? null : s.editedMetadata,
         totalImageCount: s.totalImageCount != null ? s.totalImageCount - 1 : null,

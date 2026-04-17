@@ -15,6 +15,10 @@ const electronAPI = {
   openDirectory(): Promise<string | null> {
     return ipcRenderer.invoke('dialog:openDirectory') as Promise<string | null>;
   },
+  /** 选择批量导出的目标目录（不加入工作目录） */
+  chooseOutputDirectory(): Promise<string | null> {
+    return ipcRenderer.invoke('dialog:chooseOutputDirectory') as Promise<string | null>;
+  },
   /** 从拖放得到的 File 获取本地路径（仅在 preload 中可用，contextIsolation 下必须经此桥接） */
   getPathForDroppedFile(file: File): string {
     try {
